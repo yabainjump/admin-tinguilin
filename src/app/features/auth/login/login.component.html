@@ -1,0 +1,100 @@
+<main class="login-shell">
+  <section class="login-hero">
+    <img class="hero-logo" src="assets/img/logo-light.png" alt="Tinguilin light logo" />
+    <div class="hero-copy">
+      <h1>
+        Accedez a notre tableau de bord.
+        Connectez-vous pour continuer votre session admin.
+      </h1>
+      <p>Gestion des factures et des raffles sans effort pour votre equipe.</p>
+    </div>
+    <div class="hero-mock" aria-hidden="true">
+      <div class="mock-window">
+        <div class="mock-window__top"></div>
+        <div class="mock-window__list">
+          <span>Dashboard</span>
+          <span>Raffles</span>
+          <span>Users</span>
+          <span>Payments</span>
+          <span>Winners</span>
+          <span>Settings</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="login-panel">
+    <div class="brand">
+      <img src="assets/img/logo-dark.png" alt="Tinguilin dark logo" />
+    </div>
+
+    <article class="login-card">
+      <p class="eyebrow">Content de te revoir</p>
+      <h2>Connectez-vous a votre compte admin</h2>
+
+      <div class="tabs" role="tablist" aria-label="Mode de connexion">
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="authMethod === 'email'"
+          [class.active]="authMethod === 'email'"
+          (click)="setAuthMethod('email')">
+          Email
+        </button>
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="authMethod === 'phone'"
+          [class.active]="authMethod === 'phone'"
+          (click)="setAuthMethod('phone')">
+          Numero de telephone (Whatsapp)
+        </button>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <label for="email">
+          {{ authMethod === 'email' ? 'E-mail *' : 'Numero Whatsapp *' }}
+        </label>
+        <input
+          id="email"
+          formControlName="email"
+          type="email"
+          placeholder="Entrez votre email"
+          autocomplete="username" />
+
+        <label for="password">Mot de passe *</label>
+        <div class="password-wrap">
+          <input
+            id="password"
+            formControlName="password"
+            [type]="showPassword ? 'text' : 'password'"
+            placeholder="Entrez votre mot de passe"
+            autocomplete="current-password" />
+          <button
+            type="button"
+            class="toggle-visibility"
+            [attr.aria-label]="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+            (click)="togglePasswordVisibility()">
+            {{ showPassword ? 'Hide' : 'Show' }}
+          </button>
+        </div>
+
+        <div class="options-row">
+          <label class="remember">
+            <input type="checkbox" formControlName="rememberMe" />
+            <span>Se souvenir de moi</span>
+          </label>
+          <a href="#">Mot de passe oublie ?</a>
+        </div>
+
+        <p class="form-error" *ngIf="errorMessage">{{ errorMessage }}</p>
+
+        <button class="submit-button" type="submit" [disabled]="isSubmitting">
+          {{ isSubmitting ? 'Connexion en cours...' : 'Se connecter' }}
+        </button>
+      </form>
+    </article>
+
+    <footer class="legal">(c) {{ currentYear }} - Tinguilin | All rights reserved</footer>
+  </section>
+</main>

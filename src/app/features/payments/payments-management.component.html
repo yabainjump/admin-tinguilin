@@ -1,0 +1,269 @@
+<section class="payments-page">
+  <header class="header-row">
+    <div>
+      <h3>Finance & Payments</h3>
+      <p>Manage transactions and track revenue performance</p>
+    </div>
+    <div class="search-box">
+      <input
+        type="text"
+        placeholder="Search transactions..."
+        [value]="searchTerm"
+        (input)="onSearch(($any($event.target)).value)" />
+    </div>
+  </header>
+
+  <section class="kpis" *ngIf="summary">
+    <article class="card">
+      <div class="card-top">
+        <span class="icon money">FC</span>
+        <span class="trend positive">+{{ summary.successRate | number:'1.0-1' }}%</span>
+      </div>
+      <p>Total Revenue (FCFA)</p>
+      <strong>{{ summary.totalCashInXaf | number:'1.0-0' }}</strong>
+    </article>
+
+    <article class="card">
+      <div class="card-top">
+        <span class="icon bank">BN</span>
+        <span class="trend positive">+{{ summary.successCount }}</span>
+      </div>
+      <p>Monthly Cash-in</p>
+      <strong>{{ summary.monthCashInXaf | number:'1.0-0' }}</strong>
+    </article>
+
+    <article class="card">
+      <div class="card-top">
+        <span class="icon pending">PD</span>
+        <span class="trend" [class.negative]="summary.pendingCount > 0" [class.positive]="summary.pendingCount === 0">
+          {{ summary.pendingCount > 0 ? '-' : '+' }}{{ summary.pendingCount }}
+        </span>
+      </div>
+      <p>Pending Payouts</p>
+      <strong>{{ summary.pendingPayoutsXaf | number:'1.0-0' }}</strong>
+    </article>
+
+    <article class="card">
+      <div class="card-top">
+        <span class="icon rate">OK</span>
+        <span class="trend positive">{{ summary.successRate | number:'1.0-1' }}%</span>
+      </div>
+      <p>Success Rate</p>
+      <strong>{{ summary.successRate | number:'1.0-1' }}%</strong>
+    </article>
+
+    <article class="card" *ngIf="reconciliation">
+      <div class="card-top">
+        <span class="icon pending">RC</span>
+        <span class="trend" [class.positive]="reconciliationGapTone === 'positive'" [class.negative]="reconciliationGapTone === 'negative'">
+          {{ reconciliationGapTone === 'positive' ? 'OK' : 'CHECK' }}
+        </span>
+      </div>
+      <p>{{ reconciliationGapLabel }}</p>
+      <strong>{{ reconciliationGapAbs | number:'1.0-0' }} FCFA</strong>
+    </article>
+  </section>
+
+  <div class="filters-row">
+    <div class="filters">
+      <label>
+        <select [value]="statusFilter" (change)="onStatusChange(($any($event.target)).value)">
+          <option value="ALL">All Status</option>
+          <option value="SUCCESS">Success</option>
+          <option value="PENDING">Pending</option>
+          <option value="FAILED">Failed</option>
+          <option value="REFUNDED">Refunded</option>
+        </select>
+      </label>
+
+      <label>
+        <select [value]="dateRangeFilter" (change)="onDateRangeChange(($any($event.target)).value)">
+          <option value="30D">Last 30 Days</option>
+          <option value="7D">Last 7 Days</option>
+          <option value="90D">Last 90 Days</option>
+          <option value="ALL">All Time</option>
+        </select>
+      </label>
+
+      <label>
+        <select [value]="providerFilter" (change)="onProviderChange(($any($event.target)).value)">
+          <option value="ALL">Provider</option>
+          <option *ngFor="let provider of providerOptions" [value]="provider">
+            {{ providerLabel(provider) }}
+          </option>
+        </select>
+      </label>
+    </div>
+
+    <div class="filters-meta">
+      <span>Showing {{ fromIndex }}-{{ toIndex }} of {{ total }} transactions</span>
+      <span *ngIf="isLoadingReconciliation">Checking reconciliation...</span>
+      <button type="button" class="export-btn" (click)="exportCsv()" [disabled]="isExporting">
+        {{ isExporting ? 'Export...' : 'Export CSV' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="table-wrap" *ngIf="!isLoading && !errorMessage && transactions.length">
+    <table>
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Product</th>
+          <th>Amount (FCFA)</th>
+          <th>Provider</th>
+          <th>Status</th>
+          <th>Date & Time</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let tx of transactions">
+          <td>
+            <div class="customer-cell">
+              <ng-container *ngIf="customerAvatar(tx); else customerAvatarFallback">
+                <img class="avatar" [src]="customerAvatar(tx)!" [alt]="customerName(tx)" />
+              </ng-container>
+              <ng-template #customerAvatarFallback>
+                <span class="avatar avatar-fallback">{{ customerInitials(tx) }}</span>
+              </ng-template>
+              <div>
+                <strong>{{ customerName(tx) }}</strong>
+                <p>{{ tx.user?.email || '-' }}</p>
+              </div>
+            </div>
+          </td>
+
+          <td>
+            <strong>{{ tx.product?.title || 'Raffle Ticket Purchase' }}</strong>
+            <p>{{ tx.quantity }} ticket(s)</p>
+          </td>
+
+          <td class="amount">{{ tx.amount | number:'1.0-0' }}</td>
+
+          <td>
+            <div class="provider-cell">
+              <span class="provider-badge">{{ providerBadge(tx.provider) }}</span>
+              <span>{{ providerLabel(tx.provider) }}</span>
+            </div>
+          </td>
+
+          <td>
+            <span class="status-pill"
+              [class.success]="tx.status === 'SUCCESS'"
+              [class.pending]="tx.status === 'PENDING'"
+              [class.failed]="tx.status === 'FAILED'"
+              [class.refunded]="tx.status === 'REFUNDED'">
+              {{ statusLabel(tx.status) }}
+            </span>
+          </td>
+
+          <td>
+            <div class="date-cell">
+              <span>{{ tx.createdAt | date:'MMM d, y' }}</span>
+              <span>{{ tx.createdAt | date:'HH:mm' }}</span>
+            </div>
+          </td>
+          <td>
+            <button type="button" class="action-btn" (click)="openTransactionDetails(tx)">
+              View
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <footer class="pager">
+      <button type="button" (click)="previousPage()" [disabled]="page <= 1">Previous</button>
+      <div class="pager-index">
+        <span class="current">{{ page }}</span>
+        <span>/ {{ totalPages }}</span>
+      </div>
+      <button type="button" (click)="nextPage()" [disabled]="page >= totalPages">Next</button>
+    </footer>
+  </div>
+
+  <p class="status-text" *ngIf="isLoading">Loading finance data...</p>
+  <p class="status-text error" *ngIf="!isLoading && errorMessage">{{ errorMessage }}</p>
+  <p class="status-text" *ngIf="!isLoading && !errorMessage && !transactions.length">
+    No transaction found for this filter.
+  </p>
+</section>
+
+<div class="modal-backdrop" *ngIf="selectedTransaction">
+  <section class="modal-card">
+    <header>
+      <h4>Transaction Details</h4>
+      <button type="button" (click)="closeTransactionDetails()">x</button>
+    </header>
+
+    <div class="modal-grid">
+      <article>
+        <small>Transaction ID</small>
+        <strong>{{ selectedTransaction.id }}</strong>
+      </article>
+      <article>
+        <small>Status</small>
+        <strong>{{ statusLabel(selectedTransaction.status) }}</strong>
+      </article>
+      <article>
+        <small>Provider</small>
+        <strong>{{ providerLabel(selectedTransaction.provider) }}</strong>
+      </article>
+      <article>
+        <small>Amount</small>
+        <strong>{{ selectedTransaction.amount | number:'1.0-0' }} FCFA</strong>
+      </article>
+      <article>
+        <small>Quantity</small>
+        <strong>{{ selectedTransaction.quantity }} ticket(s)</strong>
+      </article>
+      <article>
+        <small>Currency</small>
+        <strong>{{ selectedTransaction.currency || 'XAF' }}</strong>
+      </article>
+      <article>
+        <small>Created At</small>
+        <strong>{{ selectedTransaction.createdAt | date:'medium' }}</strong>
+      </article>
+      <article>
+        <small>Confirmed At</small>
+        <strong>{{ selectedTransaction.confirmedAt ? (selectedTransaction.confirmedAt | date:'medium') : '-' }}</strong>
+      </article>
+      <article>
+        <small>Provider Ref</small>
+        <strong>{{ selectedTransaction.providerRef || '-' }}</strong>
+      </article>
+      <article>
+        <small>Customer</small>
+        <strong>{{ customerName(selectedTransaction) }}</strong>
+      </article>
+      <article>
+        <small>Customer Email</small>
+        <strong>{{ selectedTransaction.user?.email || '-' }}</strong>
+      </article>
+      <article>
+        <small>Product</small>
+        <strong>{{ selectedTransaction.product?.title || 'Raffle Ticket Purchase' }}</strong>
+      </article>
+      <article>
+        <small>Raffle ID</small>
+        <strong>{{ selectedTransaction.raffle?.id || '-' }}</strong>
+      </article>
+      <article>
+        <small>Raffle Status</small>
+        <strong>{{ selectedTransaction.raffle?.status || '-' }}</strong>
+      </article>
+    </div>
+
+    <footer>
+      <button type="button" class="secondary" (click)="closeTransactionDetails()">Close</button>
+      <a
+        *ngIf="selectedTransaction.user?.email"
+        class="primary-link"
+        [href]="'mailto:' + selectedTransaction.user?.email">
+        Contact Customer
+      </a>
+    </footer>
+  </section>
+</div>

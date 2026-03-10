@@ -1,0 +1,110 @@
+<div class="layout-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <img class="brand__logo" src="assets/img/logo-dark.png" alt="Tinguilin dark logo" />
+      <div>
+        <h1>Tinguilin Admin</h1>
+        <p>Admin Portal</p>
+      </div>
+    </div>
+
+    <nav class="menu">
+      <a
+        *ngFor="let item of menuItems"
+        [routerLink]="item.route"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: item.route === '/app/dashboard' }">
+        <span>{{ item.label }}</span>
+      </a>
+    </nav>
+
+    <div class="profile-card">
+      <ng-container *ngIf="userAvatarUrl; else avatarFallback">
+        <img class="avatar" [src]="userAvatarUrl" [alt]="userDisplayName" />
+      </ng-container>
+      <ng-template #avatarFallback>
+        <div class="avatar avatar-fallback">{{ userInitials }}</div>
+      </ng-template>
+      <div class="profile-card__content">
+        <strong>{{ userDisplayName }}</strong>
+        <small>{{ userEmail }}</small>
+      </div>
+      <button type="button" (click)="logout()">Logout</button>
+    </div>
+
+    <div class="brand-footer">
+      <img src="assets/img/logo-light.png" alt="Tinguilin light logo" />
+    </div>
+  </aside>
+
+  <main class="content">
+    <header class="topbar">
+      <div>
+        <h2>{{ pageTitle }}</h2>
+        <p>{{ pageSubtitle }}</p>
+      </div>
+
+      <div class="actions">
+        <label class="search">
+          <input
+            type="text"
+            placeholder="Search data..."
+            [value]="globalSearchQuery"
+            (input)="onGlobalSearchInput(($any($event.target)).value)"
+            (focus)="openSearchPanel()"
+            (blur)="closeSearchPanel()" />
+
+          <section class="search-results" *ngIf="isSearchOpen">
+            <p class="search-state" *ngIf="isSearching">Searching...</p>
+            <p class="search-state" *ngIf="!isSearching && !hasSearchResults">No result found.</p>
+
+            <div class="result-group" *ngIf="searchResults?.users?.length">
+              <h5>Users</h5>
+              <button type="button" *ngFor="let row of searchResults?.users" (mousedown)="navigateFromSearch(row.route)">
+                <span>{{ row.name }}</span>
+                <small>{{ row.email }}</small>
+              </button>
+            </div>
+
+            <div class="result-group" *ngIf="searchResults?.customers?.length">
+              <h5>Customers</h5>
+              <button type="button" *ngFor="let row of searchResults?.customers" (mousedown)="navigateFromSearch(row.route)">
+                <span>{{ row.name }}</span>
+                <small>{{ row.email }}</small>
+              </button>
+            </div>
+
+            <div class="result-group" *ngIf="searchResults?.payments?.length">
+              <h5>Payments</h5>
+              <button type="button" *ngFor="let row of searchResults?.payments" (mousedown)="navigateFromSearch(row.route)">
+                <span>{{ row.customerName }}</span>
+                <small>{{ row.amount | number:'1.0-0' }} FCFA - {{ row.status }}</small>
+              </button>
+            </div>
+
+            <div class="result-group" *ngIf="searchResults?.raffles?.length">
+              <h5>Raffles</h5>
+              <button type="button" *ngFor="let row of searchResults?.raffles" (mousedown)="navigateFromSearch(row.route)">
+                <span>{{ row.title }}</span>
+                <small>{{ row.status }}</small>
+              </button>
+            </div>
+
+            <div class="result-group" *ngIf="searchResults?.winners?.length">
+              <h5>Winners</h5>
+              <button type="button" *ngFor="let row of searchResults?.winners" (mousedown)="navigateFromSearch(row.route)">
+                <span>{{ row.winnerName }}</span>
+                <small>{{ row.productTitle }}</small>
+              </button>
+            </div>
+          </section>
+        </label>
+        <button type="button" class="primary-button" (click)="onNewRaffleClick()">+ New Raffle</button>
+      </div>
+    </header>
+
+    <section class="page-body">
+      <router-outlet></router-outlet>
+    </section>
+  </main>
+</div>

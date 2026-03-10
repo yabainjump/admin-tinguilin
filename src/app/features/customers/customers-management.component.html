@@ -1,0 +1,87 @@
+<section class="customers-page">
+  <header class="head">
+    <div>
+      <h3>Customers Management</h3>
+      <p>Manage customer accounts and access levels.</p>
+    </div>
+    <input
+      type="text"
+      placeholder="Search customers..."
+      [value]="searchTerm"
+      (input)="onSearch(($any($event.target)).value)" />
+  </header>
+
+  <div class="tabs">
+    <button type="button" [class.active]="activeTab === 'ALL'" (click)="setTab('ALL')">All</button>
+    <button type="button" [class.active]="activeTab === 'ACTIVE'" (click)="setTab('ACTIVE')">Active</button>
+    <button type="button" [class.active]="activeTab === 'BANNED'" (click)="setTab('BANNED')">Banned</button>
+  </div>
+
+  <p class="status-text" *ngIf="isLoading">Loading customers...</p>
+  <p class="status-text error" *ngIf="!isLoading && errorMessage">{{ errorMessage }}</p>
+
+  <div class="table-wrap" *ngIf="!isLoading && !errorMessage && customers.length">
+    <table>
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Email</th>
+          <th>Phone</th>
+          <th>Status</th>
+          <th>Join Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of customers">
+          <td>
+            <div class="user-cell">
+              <ng-container *ngIf="avatarUrl(row); else fallbackAvatar">
+                <img class="avatar" [src]="avatarUrl(row)!" [alt]="fullName(row)" />
+              </ng-container>
+              <ng-template #fallbackAvatar>
+                <span class="avatar avatar-fallback">{{ initials(row) }}</span>
+              </ng-template>
+              <strong>{{ fullName(row) }}</strong>
+            </div>
+          </td>
+          <td>{{ row.email }}</td>
+          <td>{{ row.phone || '-' }}</td>
+          <td>
+            <span class="pill" [class.active]="row.status === 'ACTIVE'" [class.banned]="row.status === 'SUSPENDED'">
+              {{ row.status === 'SUSPENDED' ? 'Banned' : 'Active' }}
+            </span>
+          </td>
+          <td>{{ row.createdAt | date:'MMM d, y' }}</td>
+          <td class="actions">
+            <button
+              type="button"
+              [disabled]="actionUserId === row.id"
+              (click)="toggleStatus(row)">
+              {{ row.status === 'SUSPENDED' ? 'Unblock' : 'Block' }}
+            </button>
+            <button
+              type="button"
+              class="promote"
+              [disabled]="actionUserId === row.id"
+              (click)="makeAdmin(row)">
+              Make Admin
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <footer class="pager">
+      <span>Showing {{ fromIndex }}-{{ toIndex }} of {{ total }} customers</span>
+      <div>
+        <button type="button" (click)="previousPage()" [disabled]="page <= 1">Previous</button>
+        <button type="button" (click)="nextPage()" [disabled]="page >= totalPages">Next</button>
+      </div>
+    </footer>
+  </div>
+
+  <p class="status-text" *ngIf="!isLoading && !errorMessage && !customers.length">
+    No customer found.
+  </p>
+</section>

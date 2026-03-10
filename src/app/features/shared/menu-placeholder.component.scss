@@ -1,0 +1,35 @@
+:host {
+  display: block;
+}
+
+.placeholder-card {
+  border: 1px solid #e8defa;
+  border-radius: 1rem;
+  background: #fff;
+  padding: 1.3rem;
+  box-shadow: 0 14px 30px rgba(88, 62, 158, 0.08);
+}
+
+.placeholder-card h3 {
+  margin: 0;
+  font-size: 1.45rem;
+  color: #261f3f;
+}
+
+.placeholder-card p {
+  margin: 0.45rem 0 0;
+  color: #71698f;
+  max-width: 62ch;
+}
+
+.placeholder-card button {
+  margin-top: 0.95rem;
+  border: 0;
+  border-radius: 0.7rem;
+  padding: 0.75rem 0.95rem;
+  color: #fff;
+  background: linear-gradient(90deg, #6f2cff, #8b44ff);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
