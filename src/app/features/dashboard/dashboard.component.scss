@@ -69,6 +69,70 @@
   color: #fff;
 }
 
+.range-picker {
+  margin-bottom: 0.95rem;
+  border: 1px solid #dbe2ee;
+  border-radius: 0.9rem;
+  padding: 0.65rem 0.75rem;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.range-fields {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.range-fields label {
+  display: grid;
+  gap: 0.26rem;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.range-fields input {
+  border: 1px solid #dbe2ee;
+  border-radius: 0.55rem;
+  padding: 0.38rem 0.48rem;
+  font: inherit;
+  color: #0f172a;
+  min-width: 168px;
+}
+
+.range-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+}
+
+.btn {
+  border: 1px solid transparent;
+  border-radius: 0.55rem;
+  padding: 0.4rem 0.7rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn.apply {
+  background: #f97316;
+  border-color: #f97316;
+  color: #fff;
+}
+
+.btn.ghost {
+  background: #fff;
+  border-color: #dbe2ee;
+  color: #475569;
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -413,6 +477,15 @@ td {
   .toolbar {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .range-picker {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .range-actions {
+    justify-content: flex-end;
   }
 
   .table-wrap {

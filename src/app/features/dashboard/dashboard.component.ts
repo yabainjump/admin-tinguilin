@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import {
   AdminTransactionItem,
   DashboardAnalyticsResponse,
@@ -55,13 +55,19 @@ interface SvgBar {
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   isLoading = true;
   errorMessage = '';
 
   readonly granularities: DashboardGranularity[] = ['DAY', 'MONTH', 'YEAR'];
   granularity: DashboardGranularity = 'DAY';
   analytics: DashboardAnalyticsResponse | null = null;
+  dayFrom = '';
+  dayTo = '';
+  monthFrom = '';
+  monthTo = '';
+  yearFrom = '';
+  yearTo = '';
 
   readonly ticketsSvg: SvgConfig = {
     width: 960,
@@ -81,15 +87,56 @@ export class DashboardComponent implements OnInit {
     padBottom: 34,
   };
 
+  private readonly backgroundRefreshMs = 60000;
+  private refreshTimerId: number | null = null;
+  private isFetching = false;
+  private readonly visibilityHandler = () => {
+    if (document.visibilityState === 'visible') {
+      this.loadDashboardAnalytics(false);
+    }
+  };
+
   constructor(private readonly adminApi: AdminApiService) {}
 
   ngOnInit(): void {
+    this.initializeRangeDefaults();
     this.loadDashboardAnalytics();
+    this.startBackgroundRefresh();
+    document.addEventListener('visibilitychange', this.visibilityHandler);
+  }
+
+  ngOnDestroy(): void {
+    this.stopBackgroundRefresh();
+    document.removeEventListener('visibilitychange', this.visibilityHandler);
   }
 
   setGranularity(next: DashboardGranularity): void {
     if (this.granularity === next) return;
     this.granularity = next;
+    this.loadDashboardAnalytics();
+  }
+
+  applyRange(): void {
+    this.loadDashboardAnalytics();
+  }
+
+  resetCurrentRange(): void {
+    const now = new Date();
+
+    if (this.granularity === 'DAY') {
+      const from = new Date(now.getTime() - 23 * 60 * 60 * 1000);
+      this.dayFrom = this.toDatetimeLocal(from);
+      this.dayTo = this.toDatetimeLocal(now);
+    } else if (this.granularity === 'MONTH') {
+      const from = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+      this.monthFrom = this.toMonthInput(from);
+      this.monthTo = this.toMonthInput(now);
+    } else {
+      this.yearFrom = String(now.getFullYear() - 4);
+      this.yearTo = String(now.getFullYear());
+    }
+
+    this.errorMessage = '';
     this.loadDashboardAnalytics();
   }
 
@@ -289,11 +336,13 @@ export class DashboardComponent implements OnInit {
     if (!raw) return '-';
 
     if (this.granularity === 'DAY') {
-      const parts = raw.split('/');
-      if (parts.length >= 2) {
-        return `${parts[0]}/${parts[1]}`;
+      const [datePart = '', hourPart = ''] = raw.split(' ');
+      const dateParts = datePart.split('/');
+      if (dateParts.length >= 2) {
+        const compactDate = `${dateParts[0]}/${dateParts[1]}`;
+        return hourPart ? `${compactDate} ${hourPart}` : compactDate;
       }
-      return raw.slice(0, 5);
+      return raw;
     }
 
     if (this.granularity === 'MONTH') {
@@ -354,19 +403,181 @@ export class DashboardComponent implements OnInit {
     return 'failed';
   }
 
-  private loadDashboardAnalytics(): void {
-    this.isLoading = true;
+  private initializeRangeDefaults(): void {
+    const now = new Date();
+
+    if (!this.dayFrom || !this.dayTo) {
+      const dayFrom = new Date(now.getTime() - 23 * 60 * 60 * 1000);
+      this.dayFrom = this.toDatetimeLocal(dayFrom);
+      this.dayTo = this.toDatetimeLocal(now);
+    }
+
+    if (!this.monthFrom || !this.monthTo) {
+      const monthFrom = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+      this.monthFrom = this.toMonthInput(monthFrom);
+      this.monthTo = this.toMonthInput(now);
+    }
+
+    if (!this.yearFrom || !this.yearTo) {
+      this.yearFrom = String(now.getFullYear() - 4);
+      this.yearTo = String(now.getFullYear());
+    }
+  }
+
+  private startBackgroundRefresh(): void {
+    this.stopBackgroundRefresh();
+    this.refreshTimerId = window.setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      this.loadDashboardAnalytics(false);
+    }, this.backgroundRefreshMs);
+  }
+
+  private stopBackgroundRefresh(): void {
+    if (this.refreshTimerId !== null) {
+      window.clearInterval(this.refreshTimerId);
+      this.refreshTimerId = null;
+    }
+  }
+
+  private buildRangeParams():
+    | { dateFrom: string; dateTo: string }
+    | null {
+    this.initializeRangeDefaults();
+
+    if (this.granularity === 'DAY') {
+      const from = new Date(this.dayFrom);
+      const to = new Date(this.dayTo);
+      if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
+        this.errorMessage = 'Selection heure invalide. Verifie la plage JOUR.';
+        return null;
+      }
+      if (from.getTime() > to.getTime()) {
+        this.errorMessage = 'La borne de debut doit etre inferieure a la borne de fin.';
+        return null;
+      }
+      return {
+        dateFrom: from.toISOString(),
+        dateTo: to.toISOString(),
+      };
+    }
+
+    if (this.granularity === 'MONTH') {
+      const fromMonth = this.parseMonthInput(this.monthFrom);
+      const toMonth = this.parseMonthInput(this.monthTo);
+      if (!fromMonth || !toMonth) {
+        this.errorMessage = 'Selection mois invalide. Verifie la plage MOIS.';
+        return null;
+      }
+
+      const from = new Date(fromMonth.year, fromMonth.monthIndex, 1, 0, 0, 0, 0);
+      const to = new Date(
+        toMonth.year,
+        toMonth.monthIndex + 1,
+        0,
+        23,
+        59,
+        59,
+        999,
+      );
+
+      if (from.getTime() > to.getTime()) {
+        this.errorMessage = 'La borne de debut doit etre inferieure a la borne de fin.';
+        return null;
+      }
+
+      return {
+        dateFrom: from.toISOString(),
+        dateTo: to.toISOString(),
+      };
+    }
+
+    const fromYear = this.parseYearInput(this.yearFrom);
+    const toYear = this.parseYearInput(this.yearTo);
+    if (fromYear === null || toYear === null) {
+      this.errorMessage = 'Selection annee invalide. Verifie la plage ANNEE.';
+      return null;
+    }
+
+    const from = new Date(fromYear, 0, 1, 0, 0, 0, 0);
+    const to = new Date(toYear, 11, 31, 23, 59, 59, 999);
+
+    if (from.getTime() > to.getTime()) {
+      this.errorMessage = 'La borne de debut doit etre inferieure a la borne de fin.';
+      return null;
+    }
+
+    return {
+      dateFrom: from.toISOString(),
+      dateTo: to.toISOString(),
+    };
+  }
+
+  private parseMonthInput(
+    value: string,
+  ): { year: number; monthIndex: number } | null {
+    const match = /^(\d{4})-(\d{2})$/.exec(String(value ?? '').trim());
+    if (!match) return null;
+
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    if (!Number.isFinite(year) || !Number.isFinite(month)) return null;
+    if (month < 1 || month > 12) return null;
+
+    return { year, monthIndex: month - 1 };
+  }
+
+  private parseYearInput(value: string): number | null {
+    const year = Number(String(value ?? '').trim());
+    if (!Number.isFinite(year)) return null;
+    const normalized = Math.trunc(year);
+    if (normalized < 2000 || normalized > 2100) return null;
+    return normalized;
+  }
+
+  private toDatetimeLocal(date: Date): string {
+    const pad = (value: number) => String(value).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  }
+
+  private toMonthInput(date: Date): string {
+    const pad = (value: number) => String(value).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}`;
+  }
+
+  private loadDashboardAnalytics(showLoader = true): void {
+    const range = this.buildRangeParams();
+    if (!range) {
+      this.isLoading = false;
+      return;
+    }
+
+    if (this.isFetching) return;
+
     this.errorMessage = '';
+    if (showLoader || !this.analytics) {
+      this.isLoading = true;
+    }
+
+    this.isFetching = true;
 
     this.adminApi
-      .getDashboardAnalytics({ granularity: this.granularity })
+      .getDashboardAnalytics({
+        granularity: this.granularity,
+        dateFrom: range.dateFrom,
+        dateTo: range.dateTo,
+      })
       .subscribe({
         next: (analytics) => {
           this.analytics = analytics;
+          this.errorMessage = '';
           this.isLoading = false;
+          this.isFetching = false;
         },
         error: () => {
-          this.errorMessage = 'Impossible de charger les analytics dashboard.';
+          if (!this.analytics) {
+            this.errorMessage = 'Impossible de charger les analytics dashboard.';
+          }
+          this.isFetching = false;
           this.isLoading = false;
         },
       });

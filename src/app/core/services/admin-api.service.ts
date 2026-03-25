@@ -84,12 +84,16 @@ export class AdminApiService {
 
   getDashboardAnalytics(params?: {
     granularity?: 'DAY' | 'MONTH' | 'YEAR';
+    dateFrom?: string;
+    dateTo?: string;
   }): Observable<DashboardAnalyticsResponse> {
     return this.http.get<DashboardAnalyticsResponse>(
       `${this.apiBaseUrl}/admin/payments/dashboard-analytics`,
       {
         params: {
           granularity: params?.granularity ?? 'DAY',
+          dateFrom: params?.dateFrom ?? '',
+          dateTo: params?.dateTo ?? '',
         },
       },
     );

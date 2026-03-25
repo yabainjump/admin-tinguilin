@@ -1,7 +1,7 @@
 <p class="status-text" *ngIf="isLoading">Chargement du dashboard...</p>
 <p class="status-text error" *ngIf="!isLoading && errorMessage">{{ errorMessage }}</p>
 
-<section class="toolbar" *ngIf="!isLoading && !errorMessage">
+<section class="toolbar" *ngIf="!isLoading">
   <div class="range">
     <span class="label">Periode</span>
     <strong>{{ analytics?.range?.label }}</strong>
@@ -14,6 +14,46 @@
       (click)="setGranularity(g)">
       {{ g === 'DAY' ? 'Jour' : g === 'MONTH' ? 'Mois' : 'Annee' }}
     </button>
+  </div>
+</section>
+
+<section class="range-picker" *ngIf="!isLoading">
+  <div class="range-fields" *ngIf="granularity === 'DAY'">
+    <label>
+      De
+      <input type="datetime-local" [(ngModel)]="dayFrom" />
+    </label>
+    <label>
+      A
+      <input type="datetime-local" [(ngModel)]="dayTo" />
+    </label>
+  </div>
+
+  <div class="range-fields" *ngIf="granularity === 'MONTH'">
+    <label>
+      De
+      <input type="month" [(ngModel)]="monthFrom" />
+    </label>
+    <label>
+      A
+      <input type="month" [(ngModel)]="monthTo" />
+    </label>
+  </div>
+
+  <div class="range-fields" *ngIf="granularity === 'YEAR'">
+    <label>
+      De
+      <input type="number" min="2000" max="2100" step="1" [(ngModel)]="yearFrom" />
+    </label>
+    <label>
+      A
+      <input type="number" min="2000" max="2100" step="1" [(ngModel)]="yearTo" />
+    </label>
+  </div>
+
+  <div class="range-actions">
+    <button type="button" class="btn ghost" (click)="resetCurrentRange()">Reinitialiser</button>
+    <button type="button" class="btn apply" (click)="applyRange()">Appliquer</button>
   </div>
 </section>
 

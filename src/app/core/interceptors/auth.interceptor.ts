@@ -12,12 +12,21 @@ export class AuthInterceptor implements HttpInterceptor {
     const token = this.authService.accessToken;
     const isApiRequest = req.url.startsWith(environment.apiBaseUrl);
     const isLoginRequest = req.url.endsWith('/auth/login');
+    const isGetRequest = req.method.toUpperCase() === 'GET';
 
-    if (!token || !isApiRequest || isLoginRequest || req.headers.has('Authorization')) {
-      return next.handle(req);
+    let requestToHandle = req;
+
+    if (isApiRequest && isGetRequest && !req.params.has('_ts')) {
+      requestToHandle = requestToHandle.clone({
+        setParams: { _ts: Date.now().toString() },
+      });
     }
 
-    const authorizedRequest = req.clone({
+    if (!token || !isApiRequest || isLoginRequest || req.headers.has('Authorization')) {
+      return next.handle(requestToHandle);
+    }
+
+    const authorizedRequest = requestToHandle.clone({
       setHeaders: { Authorization: `Bearer ${token}` },
     });
 
