@@ -79,6 +79,10 @@ td {
   border-bottom: 1px solid #e4eaf3;
 }
 
+td {
+  font-size: 0.9rem;
+}
+
 th {
   color: #64748b;
   font-size: 0.8rem;
@@ -130,6 +134,12 @@ th {
   display: flex;
   align-items: center;
   gap: 0.45rem;
+}
+
+.join-date {
+  font-size: 0.82rem;
+  color: #475569;
+  white-space: nowrap;
 }
 
 .actions button {

@@ -52,7 +52,7 @@
               {{ row.status === 'SUSPENDED' ? 'Banned' : 'Active' }}
             </span>
           </td>
-          <td>{{ row.createdAt | date:'MMM d, y' }}</td>
+          <td class="join-date">{{ row.createdAt | date:'dd/MM/y HH:mm' }}</td>
           <td class="actions">
             <button
               type="button"
