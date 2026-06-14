@@ -21,144 +21,157 @@
       (input)="onSearch(($any($event.target)).value)" />
   </div>
 
-  <p class="status-text" *ngIf="isLoading">Loading users...</p>
-  <p class="status-text info" *ngIf="!isLoading && infoMessage">{{ infoMessage }}</p>
-  <p class="status-text error" *ngIf="!isLoading && errorMessage">{{ errorMessage }}</p>
+  @if (isLoading) {
+    <p class="status-text">Loading users...</p>
+  }
+  @if (!isLoading && infoMessage) {
+    <p class="status-text info">{{ infoMessage }}</p>
+  }
+  @if (!isLoading && errorMessage) {
+    <p class="status-text error">{{ errorMessage }}</p>
+  }
 
-  <table *ngIf="!isLoading && !errorMessage && users.length">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Role</th>
-        <th>Status</th>
-        <th>Username</th>
-        <th>Phone</th>
-        <th>Join Date</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let user of users">
-        <td>
-          <div class="user-cell">
-            <ng-container *ngIf="userAvatar(user); else userFallbackAvatar">
-              <img class="avatar" [src]="userAvatar(user)!" [alt]="user.firstName + ' ' + user.lastName" />
-            </ng-container>
-            <ng-template #userFallbackAvatar>
-              <span class="avatar avatar-fallback">{{ userInitials(user) }}</span>
-            </ng-template>
-            <div>
-              <strong>{{ user.firstName }} {{ user.lastName }}</strong>
-              <p>{{ user.email }}</p>
-            </div>
-          </div>
-        </td>
-        <td>
-          <span class="pill role" [class.admin]="user.role === 'ADMIN'">{{ user.role }}</span>
-        </td>
-        <td>
-          <span class="pill status" [class.active]="user.status === 'ACTIVE'" [class.banned]="user.status === 'SUSPENDED'">
-            {{ user.status === 'SUSPENDED' ? 'Banned' : 'Active' }}
-          </span>
-        </td>
-        <td>{{ displayUsername(user) }}</td>
-        <td>{{ user.phone }}</td>
-        <td>{{ user.createdAt | date:'MMM dd, y' }}</td>
-        <td class="actions">
-          <button
-            type="button"
-            class="action admin"
-            (click)="toggleRole(user)"
-            [disabled]="actionInProgressUserId === user.id">
-            {{ user.role === 'ADMIN' ? 'Revoke Admin' : 'Make Admin' }}
-          </button>
-          <button
-            type="button"
-            class="action ban"
-            (click)="toggleStatus(user)"
-            [disabled]="actionInProgressUserId === user.id || isMe(user)">
-            {{ user.status === 'SUSPENDED' ? 'Unblock' : 'Block' }}
-          </button>
-          <button
-            type="button"
-            class="action delete"
-            (click)="deleteUser(user)"
-            [disabled]="actionInProgressUserId === user.id || isMe(user)">
-            Delete
-          </button>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+  @if (!isLoading && !errorMessage && users.length) {
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Username</th>
+          <th>Phone</th>
+          <th>Join Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (user of users; track user) {
+          <tr>
+            <td>
+              <div class="user-cell">
+                @if (userAvatar(user)) {
+                  <img class="avatar" [src]="userAvatar(user)!" [alt]="user.firstName + ' ' + user.lastName" />
+                } @else {
+                  <span class="avatar avatar-fallback">{{ userInitials(user) }}</span>
+                }
+                <div>
+                  <strong>{{ user.firstName }} {{ user.lastName }}</strong>
+                  <p>{{ user.email }}</p>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="pill role" [class.admin]="user.role === 'ADMIN'">{{ user.role }}</span>
+            </td>
+            <td>
+              <span class="pill status" [class.active]="user.status === 'ACTIVE'" [class.banned]="user.status === 'SUSPENDED'">
+                {{ user.status === 'SUSPENDED' ? 'Banned' : 'Active' }}
+              </span>
+            </td>
+            <td>{{ displayUsername(user) }}</td>
+            <td>{{ user.phone }}</td>
+            <td>{{ user.createdAt | date:'MMM dd, y' }}</td>
+            <td class="actions">
+              <button
+                type="button"
+                class="action admin"
+                (click)="toggleRole(user)"
+                [disabled]="actionInProgressUserId === user.id">
+                {{ user.role === 'ADMIN' ? 'Revoke Admin' : 'Make Admin' }}
+              </button>
+              <button
+                type="button"
+                class="action ban"
+                (click)="toggleStatus(user)"
+                [disabled]="actionInProgressUserId === user.id || isMe(user)">
+                {{ user.status === 'SUSPENDED' ? 'Unblock' : 'Block' }}
+              </button>
+              <button
+                type="button"
+                class="action delete"
+                (click)="deleteUser(user)"
+                [disabled]="actionInProgressUserId === user.id || isMe(user)">
+                Delete
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
 
-  <footer class="pager" *ngIf="!isLoading && !errorMessage && users.length">
-    <span>Showing {{ (page - 1) * pageSize + 1 }} to {{ (page - 1) * pageSize + users.length }} of {{ total }} entries</span>
-    <div>
-      <button type="button" (click)="previousPage()" [disabled]="page <= 1">Prev</button>
-      <button type="button" (click)="nextPage()" [disabled]="page >= totalPages">Next</button>
-    </div>
-  </footer>
+  @if (!isLoading && !errorMessage && users.length) {
+    <footer class="pager">
+      <span>Showing {{ (page - 1) * pageSize + 1 }} to {{ (page - 1) * pageSize + users.length }} of {{ total }} entries</span>
+      <div>
+        <button type="button" (click)="previousPage()" [disabled]="page <= 1">Prev</button>
+        <button type="button" (click)="nextPage()" [disabled]="page >= totalPages">Next</button>
+      </div>
+    </footer>
+  }
 
-  <p class="status-text" *ngIf="!isLoading && !errorMessage && !users.length">
-    No user found.
-  </p>
+  @if (!isLoading && !errorMessage && !users.length) {
+    <p class="status-text">
+      No user found.
+    </p>
+  }
 </section>
 
-<div class="modal-backdrop" *ngIf="isInviteModalOpen">
-  <section class="modal-card">
-    <header>
-      <h4>Add User</h4>
-      <button type="button" (click)="closeInviteModal()" [disabled]="isInvitingUser">x</button>
-    </header>
-
-    <form [formGroup]="inviteForm" (ngSubmit)="createInvitedUser()">
-      <div class="grid">
+@if (isInviteModalOpen) {
+  <div class="modal-backdrop">
+    <section class="modal-card">
+      <header>
+        <h4>Add User</h4>
+        <button type="button" (click)="closeInviteModal()" [disabled]="isInvitingUser">x</button>
+      </header>
+      <form [formGroup]="inviteForm" (ngSubmit)="createInvitedUser()">
+        <div class="grid">
+          <label>
+            First Name *
+            <input type="text" formControlName="firstName" placeholder="Alex" />
+          </label>
+          <label>
+            Last Name *
+            <input type="text" formControlName="lastName" placeholder="Rivera" />
+          </label>
+        </div>
         <label>
-          First Name *
-          <input type="text" formControlName="firstName" placeholder="Alex" />
+          Email *
+          <input type="email" formControlName="email" placeholder="alex@example.com" />
         </label>
         <label>
-          Last Name *
-          <input type="text" formControlName="lastName" placeholder="Rivera" />
+          Phone (E.164) *
+          <input type="text" formControlName="phone" placeholder="+2376XXXXXXXX" />
         </label>
-      </div>
-
-      <label>
-        Email *
-        <input type="email" formControlName="email" placeholder="alex@example.com" />
-      </label>
-
-      <label>
-        Phone (E.164) *
-        <input type="text" formControlName="phone" placeholder="+2376XXXXXXXX" />
-      </label>
-
-      <div class="grid">
-        <label>
-          Username (optional)
-          <input type="text" formControlName="username" placeholder="alexrivera" />
-        </label>
-        <label>
-          Role
-          <select formControlName="role">
-            <option value="USER">USER</option>
-            <option value="ADMIN">ADMIN</option>
-            <option value="MODERATOR">MODERATOR</option>
-          </select>
-        </label>
-      </div>
-
-      <p class="modal-error" *ngIf="inviteForm.controls.phone.touched && inviteForm.controls.phone.invalid">
-        Le numero doit etre au format +237...
-      </p>
-      <p class="modal-error" *ngIf="inviteErrorMessage">{{ inviteErrorMessage }}</p>
-
-      <footer>
-        <button type="button" class="secondary" (click)="closeInviteModal()" [disabled]="isInvitingUser">Cancel</button>
-        <button type="submit" [disabled]="isInvitingUser">
-          {{ isInvitingUser ? 'Creating...' : 'Create User & Send Email' }}
-        </button>
-      </footer>
-    </form>
-  </section>
-</div>
+        <div class="grid">
+          <label>
+            Username (optional)
+            <input type="text" formControlName="username" placeholder="alexrivera" />
+          </label>
+          <label>
+            Role
+            <select formControlName="role">
+              <option value="USER">USER</option>
+              <option value="ADMIN">ADMIN</option>
+              <option value="MODERATOR">MODERATOR</option>
+            </select>
+          </label>
+        </div>
+        @if (inviteForm.controls.phone.touched && inviteForm.controls.phone.invalid) {
+          <p class="modal-error">
+            Le numero doit etre au format +237...
+          </p>
+        }
+        @if (inviteErrorMessage) {
+          <p class="modal-error">{{ inviteErrorMessage }}</p>
+        }
+        <footer>
+          <button type="button" class="secondary" (click)="closeInviteModal()" [disabled]="isInvitingUser">Cancel</button>
+          <button type="submit" [disabled]="isInvitingUser">
+            {{ isInvitingUser ? 'Creating...' : 'Create User & Send Email' }}
+          </button>
+        </footer>
+      </form>
+    </section>
+  </div>
+}

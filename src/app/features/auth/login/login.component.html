@@ -87,7 +87,9 @@
           <a href="#">Mot de passe oublie ?</a>
         </div>
 
-        <p class="form-error" *ngIf="errorMessage">{{ errorMessage }}</p>
+        @if (errorMessage) {
+          <p class="form-error">{{ errorMessage }}</p>
+        }
 
         <button class="submit-button" type="submit" [disabled]="isSubmitting">
           {{ isSubmitting ? 'Connexion en cours...' : 'Se connecter' }}

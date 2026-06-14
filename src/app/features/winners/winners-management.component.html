@@ -26,88 +26,98 @@
       (input)="onSearch(($any($event.target)).value)" />
   </div>
 
-  <p class="status-text" *ngIf="isLoading">Loading winners...</p>
-  <p class="status-text info" *ngIf="!isLoading && infoMessage">{{ infoMessage }}</p>
-  <p class="status-text error" *ngIf="!isLoading && errorMessage">{{ errorMessage }}</p>
+  @if (isLoading) {
+    <p class="status-text">Loading winners...</p>
+  }
+  @if (!isLoading && infoMessage) {
+    <p class="status-text info">{{ infoMessage }}</p>
+  }
+  @if (!isLoading && errorMessage) {
+    <p class="status-text error">{{ errorMessage }}</p>
+  }
 
-  <div class="table-wrap" *ngIf="!isLoading && !errorMessage && winners.length">
-    <table>
-      <thead>
-        <tr>
-          <th>User Name</th>
-          <th>Product Won</th>
-          <th>Raffle Date</th>
-          <th>Ticket Id</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let row of winners">
-          <td>
-            <div class="user-cell">
-              <ng-container *ngIf="winnerAvatar(row); else winnerAvatarFallback">
-                <img class="avatar" [src]="winnerAvatar(row)!" [alt]="row.winnerName" />
-              </ng-container>
-              <ng-template #winnerAvatarFallback>
-                <span class="avatar avatar-fallback">{{ userInitials(row) }}</span>
-              </ng-template>
-              <div>
-                <button type="button" class="winner-link" (click)="openWinnerContact(row)">
-                  {{ row.winnerName }}
+  @if (!isLoading && !errorMessage && winners.length) {
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>User Name</th>
+            <th>Product Won</th>
+            <th>Raffle Date</th>
+            <th>Ticket Id</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of winners; track row) {
+            <tr>
+              <td>
+                <div class="user-cell">
+                  @if (winnerAvatar(row)) {
+                    <img class="avatar" [src]="winnerAvatar(row)!" [alt]="row.winnerName" />
+                  } @else {
+                    <span class="avatar avatar-fallback">{{ userInitials(row) }}</span>
+                  }
+                  <div>
+                    <button type="button" class="winner-link" (click)="openWinnerContact(row)">
+                      {{ row.winnerName }}
+                    </button>
+                    <p>{{ row.winnerEmail }}</p>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <strong>{{ row.productTitle }}</strong>
+                <p>{{ row.productSubtitle || ('Valeur: ' + (row.prizeValue | number:'1.0-0') + ' FCFA') }}</p>
+              </td>
+              <td>{{ row.raffleDate | date:'MMM d, y' }}</td>
+              <td>{{ row.ticketId || '-' }}</td>
+              <td>
+                <span class="pill"
+                  [class.pending]="row.status === 'PENDING_VERIFICATION'"
+                  [class.verified]="row.status === 'VERIFIED'"
+                  [class.shipping]="row.status === 'IN_SHIPPING'"
+                  [class.delivered]="row.status === 'DELIVERED'">
+                  {{ statusLabel(row.status) }}
+                </span>
+              </td>
+              <td>
+                <button
+                  type="button"
+                  class="action"
+                  [class.view]="row.status === 'DELIVERED'"
+                  [disabled]="actionInProgressRaffleId === row.raffleId"
+                  (click)="runPrimaryAction(row)">
+                  {{ actionLabel(row.status) }}
                 </button>
-                <p>{{ row.winnerEmail }}</p>
-              </div>
-            </div>
-          </td>
-          <td>
-            <strong>{{ row.productTitle }}</strong>
-            <p>{{ row.productSubtitle || ('Valeur: ' + (row.prizeValue | number:'1.0-0') + ' FCFA') }}</p>
-          </td>
-          <td>{{ row.raffleDate | date:'MMM d, y' }}</td>
-          <td>{{ row.ticketId || '-' }}</td>
-          <td>
-            <span class="pill"
-              [class.pending]="row.status === 'PENDING_VERIFICATION'"
-              [class.verified]="row.status === 'VERIFIED'"
-              [class.shipping]="row.status === 'IN_SHIPPING'"
-              [class.delivered]="row.status === 'DELIVERED'">
-              {{ statusLabel(row.status) }}
-            </span>
-          </td>
-          <td>
-            <button
-              type="button"
-              class="action"
-              [class.view]="row.status === 'DELIVERED'"
-              [disabled]="actionInProgressRaffleId === row.raffleId"
-              (click)="runPrimaryAction(row)">
-              {{ actionLabel(row.status) }}
-            </button>
-            <button
-              type="button"
-              class="action secondary"
-              [disabled]="actionInProgressRaffleId === row.raffleId"
-              (click)="openWinnerContact(row)">
-              Contact
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+                <button
+                  type="button"
+                  class="action secondary"
+                  [disabled]="actionInProgressRaffleId === row.raffleId"
+                  (click)="openWinnerContact(row)">
+                  Contact
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <footer class="pager">
+        <span>Showing {{ (page - 1) * pageSize + 1 }} to {{ (page - 1) * pageSize + winners.length }} of {{ total }} results</span>
+        <div>
+          <button type="button" (click)="previousPage()" [disabled]="page <= 1">Previous</button>
+          <button type="button" (click)="nextPage()" [disabled]="page >= totalPages">Next</button>
+        </div>
+      </footer>
+    </div>
+  }
 
-    <footer class="pager">
-      <span>Showing {{ (page - 1) * pageSize + 1 }} to {{ (page - 1) * pageSize + winners.length }} of {{ total }} results</span>
-      <div>
-        <button type="button" (click)="previousPage()" [disabled]="page <= 1">Previous</button>
-        <button type="button" (click)="nextPage()" [disabled]="page >= totalPages">Next</button>
-      </div>
-    </footer>
-  </div>
-
-  <p class="status-text" *ngIf="!isLoading && !errorMessage && !winners.length">
-    No winner published yet.
-  </p>
+  @if (!isLoading && !errorMessage && !winners.length) {
+    <p class="status-text">
+      No winner published yet.
+    </p>
+  }
 
   <section class="cards">
     <article>
@@ -128,163 +138,168 @@
   </section>
 </section>
 
-<div class="modal-backdrop" *ngIf="statusTargetWinner && statusTargetNext">
-  <section class="modal-card confirm-modal">
-    <header>
-      <h4>Confirm Winner Update</h4>
-      <button type="button" (click)="closeStatusConfirmModal()" [disabled]="actionInProgressRaffleId === statusTargetWinner.raffleId">x</button>
-    </header>
-
-    <p class="hint">
-      Tu vas changer le statut de <strong>{{ statusTargetWinner.winnerName }}</strong>
-      de <strong>{{ statusLabel(statusTargetWinner.status) }}</strong>
-      vers <strong>{{ statusLabel(statusTargetNext) }}</strong>.
-    </p>
-
-    <div class="confirm-grid">
-      <article>
-        <small>Winner</small>
-        <strong>{{ statusTargetWinner.winnerName }}</strong>
-      </article>
-      <article>
-        <small>Prize</small>
-        <strong>{{ statusTargetWinner.productTitle }}</strong>
-      </article>
-      <article>
-        <small>Ticket</small>
-        <strong>{{ statusTargetWinner.ticketId || '-' }}</strong>
-      </article>
-    </div>
-
-    <p class="modal-error" *ngIf="statusConfirmErrorMessage">{{ statusConfirmErrorMessage }}</p>
-
-    <footer>
-      <button
-        type="button"
-        class="secondary"
-        (click)="closeStatusConfirmModal()"
-        [disabled]="actionInProgressRaffleId === statusTargetWinner.raffleId">
-        Cancel
-      </button>
-      <button
-        type="button"
-        (click)="confirmPrimaryAction()"
-        [disabled]="actionInProgressRaffleId === statusTargetWinner.raffleId">
-        {{ actionInProgressRaffleId === statusTargetWinner.raffleId ? 'Updating...' : 'Confirm Update' }}
-      </button>
-    </footer>
-  </section>
-</div>
-
-<div class="modal-backdrop" *ngIf="isAddWinnerModalOpen">
-  <section class="modal-card">
-    <header>
-      <h4>Add Winner</h4>
-      <button type="button" (click)="closeAddWinnerModal()" [disabled]="isDrawingWinner">x</button>
-    </header>
-
-    <p class="hint">Selectionne un raffle ferme sans gagnant, puis lance le tirage.</p>
-
-    <p class="status-text" *ngIf="isLoadingDrawCandidates">Loading raffles...</p>
-
-    <label *ngIf="!isLoadingDrawCandidates">
-      Raffle
-      <select [(ngModel)]="selectedDrawRaffleId">
-        <option value="">-- Select raffle --</option>
-        <option *ngFor="let raffle of eligibleDrawRaffles" [value]="raffle.id">
-          {{ raffle.product?.title || 'Raffle' }} - {{ raffle.ticketsSold }}/{{ raffle.totalTickets }} tickets
-        </option>
-      </select>
-    </label>
-
-    <p class="status-text" *ngIf="!isLoadingDrawCandidates && !eligibleDrawRaffles.length">
-      Aucun raffle ferme sans gagnant disponible.
-    </p>
-
-    <p class="modal-error" *ngIf="drawErrorMessage">{{ drawErrorMessage }}</p>
-
-    <footer>
-      <button type="button" class="secondary" (click)="closeAddWinnerModal()" [disabled]="isDrawingWinner">Cancel</button>
-      <button
-        type="button"
-        [disabled]="isDrawingWinner || isLoadingDrawCandidates || !eligibleDrawRaffles.length"
-        (click)="createWinnerFromSelection()">
-        {{ isDrawingWinner ? 'Drawing...' : 'Draw Winner' }}
-      </button>
-    </footer>
-  </section>
-</div>
-
-<div class="modal-backdrop" *ngIf="selectedWinnerContact">
-  <section class="modal-card contact-modal">
-    <header>
-      <h4>Winner Contact</h4>
-      <button type="button" (click)="closeWinnerContact()">x</button>
-    </header>
-
-    <div class="contact-hero">
-      <ng-container *ngIf="winnerAvatar(selectedWinnerContact); else selectedWinnerAvatarFallback">
-        <img class="avatar" [src]="winnerAvatar(selectedWinnerContact)!" [alt]="selectedWinnerContact.winnerName" />
-      </ng-container>
-      <ng-template #selectedWinnerAvatarFallback>
-        <span class="avatar avatar-fallback">{{ userInitials(selectedWinnerContact) }}</span>
-      </ng-template>
-      <div>
-        <strong>{{ selectedWinnerContact.winnerName }}</strong>
-        <p>{{ selectedWinnerContact.winnerEmail }}</p>
+@if (statusTargetWinner && statusTargetNext) {
+  <div class="modal-backdrop">
+    <section class="modal-card confirm-modal">
+      <header>
+        <h4>Confirm Winner Update</h4>
+        <button type="button" (click)="closeStatusConfirmModal()" [disabled]="actionInProgressRaffleId === statusTargetWinner.raffleId">x</button>
+      </header>
+      <p class="hint">
+        Tu vas changer le statut de <strong>{{ statusTargetWinner.winnerName }}</strong>
+        de <strong>{{ statusLabel(statusTargetWinner.status) }}</strong>
+        vers <strong>{{ statusLabel(statusTargetNext) }}</strong>.
+      </p>
+      <div class="confirm-grid">
+        <article>
+          <small>Winner</small>
+          <strong>{{ statusTargetWinner.winnerName }}</strong>
+        </article>
+        <article>
+          <small>Prize</small>
+          <strong>{{ statusTargetWinner.productTitle }}</strong>
+        </article>
+        <article>
+          <small>Ticket</small>
+          <strong>{{ statusTargetWinner.ticketId || '-' }}</strong>
+        </article>
       </div>
-    </div>
+      @if (statusConfirmErrorMessage) {
+        <p class="modal-error">{{ statusConfirmErrorMessage }}</p>
+      }
+      <footer>
+        <button
+          type="button"
+          class="secondary"
+          (click)="closeStatusConfirmModal()"
+          [disabled]="actionInProgressRaffleId === statusTargetWinner.raffleId">
+          Cancel
+        </button>
+        <button
+          type="button"
+          (click)="confirmPrimaryAction()"
+          [disabled]="actionInProgressRaffleId === statusTargetWinner.raffleId">
+          {{ actionInProgressRaffleId === statusTargetWinner.raffleId ? 'Updating...' : 'Confirm Update' }}
+        </button>
+      </footer>
+    </section>
+  </div>
+}
 
-    <div class="contact-grid">
-      <article>
-        <small>Full Name</small>
-        <strong>{{ selectedWinnerContact.winnerName || '-' }}</strong>
-      </article>
-      <article>
-        <small>Username</small>
-        <strong>{{ selectedWinnerContact.winnerUsername ? '@' + selectedWinnerContact.winnerUsername : '-' }}</strong>
-      </article>
-      <article>
-        <small>Email</small>
-        <strong>{{ selectedWinnerContact.winnerEmail || '-' }}</strong>
-      </article>
-      <article>
-        <small>Phone</small>
-        <strong>{{ selectedWinnerContact.winnerPhone || '-' }}</strong>
-      </article>
-      <article>
-        <small>Role</small>
-        <strong>{{ selectedWinnerContact.winnerRole || '-' }}</strong>
-      </article>
-      <article>
-        <small>Account Status</small>
-        <strong>{{ selectedWinnerContact.winnerAccountStatus || '-' }}</strong>
-      </article>
-      <article>
-        <small>Prize</small>
-        <strong>{{ selectedWinnerContact.productTitle || '-' }}</strong>
-      </article>
-      <article>
-        <small>Ticket ID</small>
-        <strong>{{ selectedWinnerContact.ticketId || '-' }}</strong>
-      </article>
-      <article>
-        <small>Raffle Date</small>
-        <strong>{{ selectedWinnerContact.raffleDate | date:'mediumDate' }}</strong>
-      </article>
-    </div>
+@if (isAddWinnerModalOpen) {
+  <div class="modal-backdrop">
+    <section class="modal-card">
+      <header>
+        <h4>Add Winner</h4>
+        <button type="button" (click)="closeAddWinnerModal()" [disabled]="isDrawingWinner">x</button>
+      </header>
+      <p class="hint">Selectionne un raffle ferme sans gagnant, puis lance le tirage.</p>
+      @if (isLoadingDrawCandidates) {
+        <p class="status-text">Loading raffles...</p>
+      }
+      @if (!isLoadingDrawCandidates) {
+        <label>
+          Raffle
+          <select [(ngModel)]="selectedDrawRaffleId">
+            <option value="">-- Select raffle --</option>
+            @for (raffle of eligibleDrawRaffles; track raffle) {
+              <option [value]="raffle.id">
+                {{ raffle.product?.title || 'Raffle' }} - {{ raffle.ticketsSold }}/{{ raffle.totalTickets }} tickets
+              </option>
+            }
+          </select>
+        </label>
+      }
+      @if (!isLoadingDrawCandidates && !eligibleDrawRaffles.length) {
+        <p class="status-text">
+          Aucun raffle ferme sans gagnant disponible.
+        </p>
+      }
+      @if (drawErrorMessage) {
+        <p class="modal-error">{{ drawErrorMessage }}</p>
+      }
+      <footer>
+        <button type="button" class="secondary" (click)="closeAddWinnerModal()" [disabled]="isDrawingWinner">Cancel</button>
+        <button
+          type="button"
+          [disabled]="isDrawingWinner || isLoadingDrawCandidates || !eligibleDrawRaffles.length"
+          (click)="createWinnerFromSelection()">
+          {{ isDrawingWinner ? 'Drawing...' : 'Draw Winner' }}
+        </button>
+      </footer>
+    </section>
+  </div>
+}
 
-    <footer>
-      <button type="button" class="secondary" (click)="closeWinnerContact()">Close</button>
-      <a
-        *ngIf="selectedWinnerContact.winnerPhone"
-        class="contact-action secondary-link"
-        [href]="winnerPhoneLink(selectedWinnerContact)">
-        Call
-      </a>
-      <a class="contact-action" [href]="'mailto:' + selectedWinnerContact.winnerEmail">
-        Send Email
-      </a>
-    </footer>
-  </section>
-</div>
+@if (selectedWinnerContact) {
+  <div class="modal-backdrop">
+    <section class="modal-card contact-modal">
+      <header>
+        <h4>Winner Contact</h4>
+        <button type="button" (click)="closeWinnerContact()">x</button>
+      </header>
+      <div class="contact-hero">
+        @if (winnerAvatar(selectedWinnerContact)) {
+          <img class="avatar" [src]="winnerAvatar(selectedWinnerContact)!" [alt]="selectedWinnerContact.winnerName" />
+        } @else {
+          <span class="avatar avatar-fallback">{{ userInitials(selectedWinnerContact) }}</span>
+        }
+        <div>
+          <strong>{{ selectedWinnerContact.winnerName }}</strong>
+          <p>{{ selectedWinnerContact.winnerEmail }}</p>
+        </div>
+      </div>
+      <div class="contact-grid">
+        <article>
+          <small>Full Name</small>
+          <strong>{{ selectedWinnerContact.winnerName || '-' }}</strong>
+        </article>
+        <article>
+          <small>Username</small>
+          <strong>{{ selectedWinnerContact.winnerUsername ? '@' + selectedWinnerContact.winnerUsername : '-' }}</strong>
+        </article>
+        <article>
+          <small>Email</small>
+          <strong>{{ selectedWinnerContact.winnerEmail || '-' }}</strong>
+        </article>
+        <article>
+          <small>Phone</small>
+          <strong>{{ selectedWinnerContact.winnerPhone || '-' }}</strong>
+        </article>
+        <article>
+          <small>Role</small>
+          <strong>{{ selectedWinnerContact.winnerRole || '-' }}</strong>
+        </article>
+        <article>
+          <small>Account Status</small>
+          <strong>{{ selectedWinnerContact.winnerAccountStatus || '-' }}</strong>
+        </article>
+        <article>
+          <small>Prize</small>
+          <strong>{{ selectedWinnerContact.productTitle || '-' }}</strong>
+        </article>
+        <article>
+          <small>Ticket ID</small>
+          <strong>{{ selectedWinnerContact.ticketId || '-' }}</strong>
+        </article>
+        <article>
+          <small>Raffle Date</small>
+          <strong>{{ selectedWinnerContact.raffleDate | date:'mediumDate' }}</strong>
+        </article>
+      </div>
+      <footer>
+        <button type="button" class="secondary" (click)="closeWinnerContact()">Close</button>
+        @if (selectedWinnerContact.winnerPhone) {
+          <a
+            class="contact-action secondary-link"
+            [href]="winnerPhoneLink(selectedWinnerContact)">
+            Call
+          </a>
+        }
+        <a class="contact-action" [href]="'mailto:' + selectedWinnerContact.winnerEmail">
+          Send Email
+        </a>
+      </footer>
+    </section>
+  </div>
+}
