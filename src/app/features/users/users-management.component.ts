@@ -9,9 +9,10 @@ import { environment } from '../../../environments/environment';
 type UsersTab = 'ALL' | 'ACTIVE' | 'BANNED' | 'ADMIN';
 
 @Component({
-  selector: 'app-users-management',
-  templateUrl: './users-management.component.html',
-  styleUrls: ['./users-management.component.scss'],
+    selector: 'app-users-management',
+    templateUrl: './users-management.component.html',
+    styleUrls: ['./users-management.component.scss'],
+    standalone: false
 })
 export class UsersManagementComponent implements OnInit {
   isLoading = true;

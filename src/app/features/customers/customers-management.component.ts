@@ -7,9 +7,10 @@ import { environment } from '../../../environments/environment';
 type CustomerTab = 'ALL' | 'ACTIVE' | 'BANNED';
 
 @Component({
-  selector: 'app-customers-management',
-  templateUrl: './customers-management.component.html',
-  styleUrls: ['./customers-management.component.scss'],
+    selector: 'app-customers-management',
+    templateUrl: './customers-management.component.html',
+    styleUrls: ['./customers-management.component.scss'],
+    standalone: false
 })
 export class CustomersManagementComponent implements OnInit {
   isLoading = true;

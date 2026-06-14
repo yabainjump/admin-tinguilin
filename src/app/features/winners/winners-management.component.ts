@@ -15,9 +15,10 @@ import { environment } from '../../../environments/environment';
 type WinnersTab = 'ALL' | 'PENDING_VERIFICATION' | 'IN_SHIPPING' | 'DELIVERED';
 
 @Component({
-  selector: 'app-winners-management',
-  templateUrl: './winners-management.component.html',
-  styleUrls: ['./winners-management.component.scss'],
+    selector: 'app-winners-management',
+    templateUrl: './winners-management.component.html',
+    styleUrls: ['./winners-management.component.scss'],
+    standalone: false
 })
 export class WinnersManagementComponent implements OnInit {
   isLoading = true;
