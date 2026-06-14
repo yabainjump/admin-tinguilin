@@ -1,277 +1,305 @@
-<p class="status-text" *ngIf="isLoading">Chargement du dashboard...</p>
-<p class="status-text error" *ngIf="!isLoading && errorMessage">{{ errorMessage }}</p>
+@if (isLoading) {
+  <p class="status-text">Chargement du dashboard...</p>
+}
+@if (!isLoading && errorMessage) {
+  <p class="status-text error">{{ errorMessage }}</p>
+}
 
-<section class="toolbar" *ngIf="!isLoading">
-  <div class="range">
-    <span class="label">Periode</span>
-    <strong>{{ analytics?.range?.label }}</strong>
-  </div>
-  <div class="granularity">
-    <button
-      type="button"
-      *ngFor="let g of granularities"
-      [class.active]="granularity === g"
-      (click)="setGranularity(g)">
-      {{ g === 'DAY' ? 'Jour' : g === 'MONTH' ? 'Mois' : 'Annee' }}
-    </button>
-  </div>
-</section>
-
-<section class="range-picker" *ngIf="!isLoading">
-  <div class="range-fields" *ngIf="granularity === 'DAY'">
-    <label>
-      De
-      <input type="datetime-local" [(ngModel)]="dayFrom" />
-    </label>
-    <label>
-      A
-      <input type="datetime-local" [(ngModel)]="dayTo" />
-    </label>
-  </div>
-
-  <div class="range-fields" *ngIf="granularity === 'MONTH'">
-    <label>
-      De
-      <input type="month" [(ngModel)]="monthFrom" />
-    </label>
-    <label>
-      A
-      <input type="month" [(ngModel)]="monthTo" />
-    </label>
-  </div>
-
-  <div class="range-fields" *ngIf="granularity === 'YEAR'">
-    <label>
-      De
-      <input type="number" min="2000" max="2100" step="1" [(ngModel)]="yearFrom" />
-    </label>
-    <label>
-      A
-      <input type="number" min="2000" max="2100" step="1" [(ngModel)]="yearTo" />
-    </label>
-  </div>
-
-  <div class="range-actions">
-    <button type="button" class="btn ghost" (click)="resetCurrentRange()">Reinitialiser</button>
-    <button type="button" class="btn apply" (click)="applyRange()">Appliquer</button>
-  </div>
-</section>
-
-<section class="stats-grid" *ngIf="!isLoading && !errorMessage && analytics">
-  <article class="card stat-card" *ngFor="let stat of stats">
-    <p>{{ stat.label }}</p>
-    <h3>{{ stat.value }}</h3>
-    <div class="delta-row">
-      <strong [class.positive]="deltaTone(stat.deltaPct) === 'positive'" [class.negative]="deltaTone(stat.deltaPct) === 'negative'">
-        {{ stat.deltaPct >= 0 ? '+' : '' }}{{ stat.deltaPct }}%
-      </strong>
-      <span>{{ stat.hint }}</span>
+@if (!isLoading) {
+  <section class="toolbar">
+    <div class="range">
+      <span class="label">Periode</span>
+      <strong>{{ analytics?.range?.label }}</strong>
     </div>
-  </article>
-</section>
-
-<section class="analytics-grid" *ngIf="!isLoading && !errorMessage && analytics">
-  <article class="card chart-card">
-    <header>
-      <h4>Tickets Sold Trend</h4>
-      <p>Evolution des tickets vendus</p>
-    </header>
-
-    <div class="chart-host" *ngIf="chartPoints.length; else noSeriesChart">
-      <svg [attr.viewBox]="'0 0 ' + ticketsSvg.width + ' ' + ticketsSvg.height" preserveAspectRatio="none">
-        <g class="chart-grid">
-          <line
-            *ngFor="let y of ticketsGridY"
-            [attr.x1]="ticketsSvg.padLeft"
-            [attr.y1]="y"
-            [attr.x2]="ticketsSvg.width - ticketsSvg.padRight"
-            [attr.y2]="y"></line>
-        </g>
-
-        <line
-          class="chart-axis"
-          [attr.x1]="ticketsSvg.padLeft"
-          [attr.y1]="ticketsSvg.height - ticketsSvg.padBottom"
-          [attr.x2]="ticketsSvg.width - ticketsSvg.padRight"
-          [attr.y2]="ticketsSvg.height - ticketsSvg.padBottom"></line>
-
-        <path class="chart-area tickets" [attr.d]="ticketsAreaPath"></path>
-        <path class="chart-line tickets" [attr.d]="ticketsLinePath"></path>
-
-        <g class="chart-points">
-          <circle
-            *ngFor="let point of ticketsPoints"
-            [attr.cx]="point.x"
-            [attr.cy]="point.y"
-            r="3">
-            <title>{{ point.fullLabel }} • {{ point.value | number:'1.0-0' }} tickets</title>
-          </circle>
-        </g>
-
-        <g class="chart-labels">
-          <ng-container *ngFor="let point of ticketsPoints; let i = index">
-            <text
-              *ngIf="showChartLabel(i, ticketsPoints.length)"
-              [attr.x]="point.x"
-              [attr.y]="ticketsLabelY"
-              text-anchor="middle">
-              {{ point.label }}
-            </text>
-          </ng-container>
-        </g>
-      </svg>
+    <div class="granularity">
+      @for (g of granularities; track g) {
+        <button
+          type="button"
+          [class.active]="granularity === g"
+          (click)="setGranularity(g)">
+          {{ g === 'DAY' ? 'Jour' : g === 'MONTH' ? 'Mois' : 'Annee' }}
+        </button>
+      }
     </div>
-  </article>
+  </section>
+}
 
-  <article class="card chart-card">
-    <header>
-      <h4>Cash-In Trend (FCFA)</h4>
-      <p>Volume d'achats de tickets</p>
-    </header>
-
-    <div class="chart-host" *ngIf="chartPoints.length; else noSeriesChart">
-      <svg [attr.viewBox]="'0 0 ' + cashSvg.width + ' ' + cashSvg.height" preserveAspectRatio="none">
-        <g class="chart-grid">
-          <line
-            *ngFor="let y of cashGridY"
-            [attr.x1]="cashSvg.padLeft"
-            [attr.y1]="y"
-            [attr.x2]="cashSvg.width - cashSvg.padRight"
-            [attr.y2]="y"></line>
-        </g>
-
-        <line
-          class="chart-axis"
-          [attr.x1]="cashSvg.padLeft"
-          [attr.y1]="cashSvg.height - cashSvg.padBottom"
-          [attr.x2]="cashSvg.width - cashSvg.padRight"
-          [attr.y2]="cashSvg.height - cashSvg.padBottom"></line>
-
-        <g class="chart-bars cash">
-          <rect
-            *ngFor="let bar of cashBars"
-            [attr.x]="bar.x"
-            [attr.y]="bar.y"
-            [attr.width]="bar.width"
-            [attr.height]="bar.height"
-            rx="6"
-            ry="6">
-            <title>{{ bar.fullLabel }} • {{ bar.value | number:'1.0-0' }} FCFA</title>
-          </rect>
-        </g>
-
-        <g class="chart-labels">
-          <ng-container *ngFor="let bar of cashBars; let i = index">
-            <text
-              *ngIf="showChartLabel(i, cashBars.length)"
-              [attr.x]="bar.centerX"
-              [attr.y]="cashLabelY"
-              text-anchor="middle">
-              {{ bar.label }}
-            </text>
-          </ng-container>
-        </g>
-      </svg>
+@if (!isLoading) {
+  <section class="range-picker">
+    @if (granularity === 'DAY') {
+      <div class="range-fields">
+        <label>
+          De
+          <input type="datetime-local" [(ngModel)]="dayFrom" />
+        </label>
+        <label>
+          A
+          <input type="datetime-local" [(ngModel)]="dayTo" />
+        </label>
+      </div>
+    }
+    @if (granularity === 'MONTH') {
+      <div class="range-fields">
+        <label>
+          De
+          <input type="month" [(ngModel)]="monthFrom" />
+        </label>
+        <label>
+          A
+          <input type="month" [(ngModel)]="monthTo" />
+        </label>
+      </div>
+    }
+    @if (granularity === 'YEAR') {
+      <div class="range-fields">
+        <label>
+          De
+          <input type="number" min="2000" max="2100" step="1" [(ngModel)]="yearFrom" />
+        </label>
+        <label>
+          A
+          <input type="number" min="2000" max="2100" step="1" [(ngModel)]="yearTo" />
+        </label>
+      </div>
+    }
+    <div class="range-actions">
+      <button type="button" class="btn ghost" (click)="resetCurrentRange()">Reinitialiser</button>
+      <button type="button" class="btn apply" (click)="applyRange()">Appliquer</button>
     </div>
-  </article>
-</section>
+  </section>
+}
 
-<ng-template #noSeriesChart>
-  <p class="status-text">Aucune donnee serie disponible.</p>
-</ng-template>
-
-<section class="analytics-grid analytics-grid--secondary" *ngIf="!isLoading && !errorMessage && analytics">
-  <article class="card providers-card">
-    <header>
-      <h4>Cash-In by Provider</h4>
-      <p>Repartition des encaissements</p>
-    </header>
-
-    <ul *ngIf="analytics.byProvider.length; else noProviders">
-      <li *ngFor="let row of analytics.byProvider">
-        <div>
-          <strong>{{ providerLabel(row.provider) }}</strong>
-          <small>{{ row.transactions }} tx • {{ row.ticketsSold }} tickets</small>
-        </div>
-        <span>{{ row.cashIn | number:'1.0-0' }} FCFA</span>
-      </li>
-    </ul>
-
-    <ng-template #noProviders>
-      <p class="status-text">Aucune transaction provider pour cette periode.</p>
-    </ng-template>
-  </article>
-
-  <article class="card top-raffles-card">
-    <header>
-      <h4>Top Raffles</h4>
-      <p>Classement par ventes et cash-in</p>
-    </header>
-
-    <div class="top-raffles" *ngIf="analytics.topRaffles.length; else noTopRaffles">
-      <article *ngFor="let row of analytics.topRaffles">
-        <h5>{{ row.title }}</h5>
-        <p>{{ row.status }}</p>
-        <div class="meta">
-          <span>{{ row.ticketsSold }} tickets</span>
-          <strong>{{ row.cashIn | number:'1.0-0' }} FCFA</strong>
+@if (!isLoading && !errorMessage && analytics) {
+  <section class="stats-grid">
+    @for (stat of stats; track stat) {
+      <article class="card stat-card">
+        <p>{{ stat.label }}</p>
+        <h3>{{ stat.value }}</h3>
+        <div class="delta-row">
+          <strong [class.positive]="deltaTone(stat.deltaPct) === 'positive'" [class.negative]="deltaTone(stat.deltaPct) === 'negative'">
+            {{ stat.deltaPct >= 0 ? '+' : '' }}{{ stat.deltaPct }}%
+          </strong>
+          <span>{{ stat.hint }}</span>
         </div>
       </article>
-    </div>
+    }
+  </section>
+}
 
-    <ng-template #noTopRaffles>
-      <p class="status-text">Pas de raffle dans cette periode.</p>
-    </ng-template>
-  </article>
-</section>
+@if (!isLoading && !errorMessage && analytics) {
+  <section class="analytics-grid">
+    <article class="card chart-card">
+      <header>
+        <h4>Tickets Sold Trend</h4>
+        <p>Evolution des tickets vendus</p>
+      </header>
+      @if (chartPoints.length) {
+        <div class="chart-host">
+          <svg [attr.viewBox]="'0 0 ' + ticketsSvg.width + ' ' + ticketsSvg.height" preserveAspectRatio="none">
+            <g class="chart-grid">
+              @for (y of ticketsGridY; track y) {
+                <line
+                  [attr.x1]="ticketsSvg.padLeft"
+                  [attr.y1]="y"
+                  [attr.x2]="ticketsSvg.width - ticketsSvg.padRight"
+                [attr.y2]="y"></line>
+              }
+            </g>
+            <line
+              class="chart-axis"
+              [attr.x1]="ticketsSvg.padLeft"
+              [attr.y1]="ticketsSvg.height - ticketsSvg.padBottom"
+              [attr.x2]="ticketsSvg.width - ticketsSvg.padRight"
+            [attr.y2]="ticketsSvg.height - ticketsSvg.padBottom"></line>
+            <path class="chart-area tickets" [attr.d]="ticketsAreaPath"></path>
+            <path class="chart-line tickets" [attr.d]="ticketsLinePath"></path>
+            <g class="chart-points">
+              @for (point of ticketsPoints; track point) {
+                <circle
+                  [attr.cx]="point.x"
+                  [attr.cy]="point.y"
+                  r="3">
+                  <title>{{ point.fullLabel }} • {{ point.value | number:'1.0-0' }} tickets</title>
+                </circle>
+              }
+            </g>
+            <g class="chart-labels">
+              @for (point of ticketsPoints; track point; let i = $index) {
+                <ng-container>
+                  @if (showChartLabel(i, ticketsPoints.length)) {
+                    <text
+                      [attr.x]="point.x"
+                      [attr.y]="ticketsLabelY"
+                      text-anchor="middle">
+                      {{ point.label }}
+                    </text>
+                  }
+                </ng-container>
+              }
+            </g>
+          </svg>
+        </div>
+      } @else {
+        <p class="status-text">Aucune donnee serie disponible.</p>
+      }
+    </article>
+    <article class="card chart-card">
+      <header>
+        <h4>Cash-In Trend (FCFA)</h4>
+        <p>Volume d'achats de tickets</p>
+      </header>
+      @if (chartPoints.length) {
+        <div class="chart-host">
+          <svg [attr.viewBox]="'0 0 ' + cashSvg.width + ' ' + cashSvg.height" preserveAspectRatio="none">
+            <g class="chart-grid">
+              @for (y of cashGridY; track y) {
+                <line
+                  [attr.x1]="cashSvg.padLeft"
+                  [attr.y1]="y"
+                  [attr.x2]="cashSvg.width - cashSvg.padRight"
+                [attr.y2]="y"></line>
+              }
+            </g>
+            <line
+              class="chart-axis"
+              [attr.x1]="cashSvg.padLeft"
+              [attr.y1]="cashSvg.height - cashSvg.padBottom"
+              [attr.x2]="cashSvg.width - cashSvg.padRight"
+            [attr.y2]="cashSvg.height - cashSvg.padBottom"></line>
+            <g class="chart-bars cash">
+              @for (bar of cashBars; track bar) {
+                <rect
+                  [attr.x]="bar.x"
+                  [attr.y]="bar.y"
+                  [attr.width]="bar.width"
+                  [attr.height]="bar.height"
+                  rx="6"
+                  ry="6">
+                  <title>{{ bar.fullLabel }} • {{ bar.value | number:'1.0-0' }} FCFA</title>
+                </rect>
+              }
+            </g>
+            <g class="chart-labels">
+              @for (bar of cashBars; track bar; let i = $index) {
+                <ng-container>
+                  @if (showChartLabel(i, cashBars.length)) {
+                    <text
+                      [attr.x]="bar.centerX"
+                      [attr.y]="cashLabelY"
+                      text-anchor="middle">
+                      {{ bar.label }}
+                    </text>
+                  }
+                </ng-container>
+              }
+            </g>
+          </svg>
+        </div>
+      } @else {
+        <p class="status-text">Aucune donnee serie disponible.</p>
+      }
+    </article>
+  </section>
+}
 
-<section class="transactions-section" *ngIf="!isLoading && !errorMessage && analytics">
-  <header>
-    <h4>Recent Transactions</h4>
-    <a routerLink="/app/payments">Voir toutes les transactions</a>
-  </header>
 
-  <div class="table-wrap" *ngIf="analytics.recentTransactions.length; else noTx">
-    <table>
-      <thead>
-        <tr>
-          <th>Customer</th>
-          <th>Product</th>
-          <th>Amount</th>
-          <th>Status</th>
-          <th>Date</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let tx of analytics.recentTransactions">
-          <td>
-            <div class="customer">
-              <ng-container *ngIf="txAvatar(tx); else txAvatarFallback">
-                <img class="avatar" [src]="txAvatar(tx)!" [alt]="txCustomerName(tx)" />
-              </ng-container>
-              <ng-template #txAvatarFallback>
-                <span class="avatar avatar--fallback">{{ txInitials(tx) }}</span>
-              </ng-template>
+@if (!isLoading && !errorMessage && analytics) {
+  <section class="analytics-grid analytics-grid--secondary">
+    <article class="card providers-card">
+      <header>
+        <h4>Cash-In by Provider</h4>
+        <p>Repartition des encaissements</p>
+      </header>
+      @if (analytics.byProvider.length) {
+        <ul>
+          @for (row of analytics.byProvider; track row) {
+            <li>
               <div>
-                <strong>{{ txCustomerName(tx) }}</strong>
-                <small>{{ tx.user?.email || '-' }}</small>
+                <strong>{{ providerLabel(row.provider) }}</strong>
+                <small>{{ row.transactions }} tx • {{ row.ticketsSold }} tickets</small>
               </div>
-            </div>
-          </td>
-          <td>{{ tx.product?.title || 'Raffle Ticket Purchase' }}</td>
-          <td>{{ tx.amount | number:'1.0-0' }} FCFA</td>
-          <td>
-            <span class="pill" [ngClass]="txStatusTone(tx.status)">
-              {{ txStatusLabel(tx.status) }}
-            </span>
-          </td>
-          <td>{{ tx.createdAt | date:'dd/MM/y HH:mm' }}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+              <span>{{ row.cashIn | number:'1.0-0' }} FCFA</span>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="status-text">Aucune transaction provider pour cette periode.</p>
+      }
+    </article>
+    <article class="card top-raffles-card">
+      <header>
+        <h4>Top Raffles</h4>
+        <p>Classement par ventes et cash-in</p>
+      </header>
+      @if (analytics.topRaffles.length) {
+        <div class="top-raffles">
+          @for (row of analytics.topRaffles; track row) {
+            <article>
+              <h5>{{ row.title }}</h5>
+              <p>{{ row.status }}</p>
+              <div class="meta">
+                <span>{{ row.ticketsSold }} tickets</span>
+                <strong>{{ row.cashIn | number:'1.0-0' }} FCFA</strong>
+              </div>
+            </article>
+          }
+        </div>
+      } @else {
+        <p class="status-text">Pas de raffle dans cette periode.</p>
+      }
+    </article>
+  </section>
+}
 
-  <ng-template #noTx>
-    <p class="status-text">Aucune transaction recente.</p>
-  </ng-template>
-</section>
+@if (!isLoading && !errorMessage && analytics) {
+  <section class="transactions-section">
+    <header>
+      <h4>Recent Transactions</h4>
+      <a routerLink="/app/payments">Voir toutes les transactions</a>
+    </header>
+    @if (analytics.recentTransactions.length) {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Product</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (tx of analytics.recentTransactions; track tx) {
+              <tr>
+                <td>
+                  <div class="customer">
+                    @if (txAvatar(tx)) {
+                      <img class="avatar" [src]="txAvatar(tx)!" [alt]="txCustomerName(tx)" />
+                    } @else {
+                      <span class="avatar avatar--fallback">{{ txInitials(tx) }}</span>
+                    }
+                    <div>
+                      <strong>{{ txCustomerName(tx) }}</strong>
+                      <small>{{ tx.user?.email || '-' }}</small>
+                    </div>
+                  </div>
+                </td>
+                <td>{{ tx.product?.title || 'Raffle Ticket Purchase' }}</td>
+                <td>{{ tx.amount | number:'1.0-0' }} FCFA</td>
+                <td>
+                  <span class="pill" [ngClass]="txStatusTone(tx.status)">
+                    {{ txStatusLabel(tx.status) }}
+                  </span>
+                </td>
+                <td>{{ tx.createdAt | date:'dd/MM/y HH:mm' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <p class="status-text">Aucune transaction recente.</p>
+    }
+  </section>
+}

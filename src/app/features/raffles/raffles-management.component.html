@@ -38,237 +38,253 @@
         (input)="onSearch(($any($event.target)).value)" />
     </div>
 
-    <p class="status-text" *ngIf="isLoading">Loading raffles...</p>
-    <p class="status-text success" *ngIf="!isLoading && successMessage">{{ successMessage }}</p>
-    <p class="status-text error" *ngIf="!isLoading && errorMessage">{{ errorMessage }}</p>
+    @if (isLoading) {
+      <p class="status-text">Loading raffles...</p>
+    }
+    @if (!isLoading && successMessage) {
+      <p class="status-text success">{{ successMessage }}</p>
+    }
+    @if (!isLoading && errorMessage) {
+      <p class="status-text error">{{ errorMessage }}</p>
+    }
 
-    <table *ngIf="!isLoading && !errorMessage && pagedRows.length">
-      <thead>
-        <tr>
-          <th>Product Name</th>
-          <th>Real Price</th>
-          <th>Ticket Price</th>
-          <th>Progress</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let row of pagedRows">
-          <td class="product-cell">
-            <div class="thumb" [style.background-image]="row.imageUrl ? 'url(' + row.imageUrl + ')' : ''"></div>
-            <span>{{ row.productName }}</span>
-          </td>
-          <td>{{ row.realPrice }}</td>
-          <td class="ticket-price">{{ row.ticketPrice }}</td>
-          <td>
-            <p>{{ row.progress }}% sold ({{ row.soldText }})</p>
-            <div class="progress"><div [style.width.%]="row.progress"></div></div>
-          </td>
-          <td>
-            <span class="status-pill" [ngClass]="row.statusTone">{{ row.statusLabel }}</span>
-          </td>
-          <td class="actions">
-            <button type="button" class="action view" (click)="openViewModal(row.id)">View</button>
-            <button type="button" class="action edit" (click)="openEditModal(row.id)">Edit</button>
-            <button
-              type="button"
-              class="action delete"
-              (click)="deleteRaffle(row.id)"
-              [disabled]="isDeletingRaffleId === row.id">
+    @if (!isLoading && !errorMessage && pagedRows.length) {
+      <table>
+        <thead>
+          <tr>
+            <th>Product Name</th>
+            <th>Real Price</th>
+            <th>Ticket Price</th>
+            <th>Progress</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of pagedRows; track row) {
+            <tr>
+              <td class="product-cell">
+                <div class="thumb" [style.background-image]="row.imageUrl ? 'url(' + row.imageUrl + ')' : ''"></div>
+                <span>{{ row.productName }}</span>
+              </td>
+              <td>{{ row.realPrice }}</td>
+              <td class="ticket-price">{{ row.ticketPrice }}</td>
+              <td>
+                <p>{{ row.progress }}% sold ({{ row.soldText }})</p>
+                <div class="progress"><div [style.width.%]="row.progress"></div></div>
+              </td>
+              <td>
+                <span class="status-pill" [ngClass]="row.statusTone">{{ row.statusLabel }}</span>
+              </td>
+              <td class="actions">
+                <button type="button" class="action view" (click)="openViewModal(row.id)">View</button>
+                <button type="button" class="action edit" (click)="openEditModal(row.id)">Edit</button>
+                <button
+                  type="button"
+                  class="action delete"
+                  (click)="deleteRaffle(row.id)"
+                  [disabled]="isDeletingRaffleId === row.id">
+                  Delete
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+
+    @if (!isLoading && !errorMessage && !pagedRows.length) {
+      <p class="status-text">
+        No raffle found for current filters.
+      </p>
+    }
+
+    @if (!isLoading && !errorMessage && filteredRows.length) {
+      <footer class="pager">
+        <span>Showing {{ (page - 1) * pageSize + 1 }} to {{ (page - 1) * pageSize + pagedRows.length }} of {{ filteredRows.length }}</span>
+        <div>
+          <button type="button" (click)="previousPage()" [disabled]="page <= 1">Prev</button>
+          <button type="button" (click)="nextPage()" [disabled]="page >= totalPages">Next</button>
+        </div>
+      </footer>
+    }
+  </section>
+
+  @if (isCreateModalOpen) {
+    <section class="raffle-modal-backdrop" (click)="closeCreateModal()">
+      <article class="raffle-modal" (click)="$event.stopPropagation()">
+        <header class="raffle-modal__head">
+          <h4>Create New Raffle</h4>
+          <button type="button" (click)="closeCreateModal()" [disabled]="isCreating">x</button>
+        </header>
+        <form class="raffle-modal__form" [formGroup]="createForm" (ngSubmit)="submitCreateRaffle()">
+          <div class="grid-2">
+            <label>
+              Product Title *
+              <input type="text" formControlName="title" placeholder="iPhone 16 Pro Max" />
+            </label>
+            <label class="file-field">
+              Product Image (File) *
+              <input type="file" accept="image/*" (change)="onCreateImageSelected($event)" />
+              @if (createImageFileName) {
+                <small>{{ createImageFileName }}</small>
+              }
+            </label>
+          </div>
+          @if (createImagePreviewUrl) {
+            <div class="create-image-preview">
+              <div
+                class="create-image-preview__media"
+              [style.background-image]="'url(' + createImagePreviewUrl + ')'"></div>
+            </div>
+          }
+          <label>
+            Description
+            <textarea rows="2" formControlName="description" placeholder="Edition, color, details..."></textarea>
+          </label>
+          <div class="grid-3">
+            <label>
+              Real Value (FCFA) *
+              <input type="number" min="0" formControlName="realValue" />
+            </label>
+            <label>
+              Ticket Price (FCFA) *
+              <input type="number" min="1" formControlName="ticketPrice" />
+            </label>
+            <label>
+              Total Tickets *
+              <input type="number" min="1" formControlName="totalTickets" />
+            </label>
+          </div>
+          <div class="grid-3">
+            <label>
+              End Date *
+              <input type="datetime-local" formControlName="endAt" />
+            </label>
+            <label>
+              Category
+              <input type="text" formControlName="categoryId" placeholder="GENERAL" />
+            </label>
+            <label>
+              Badge
+              <input type="text" formControlName="badge" placeholder="VIP / GOLD / LIVE" />
+            </label>
+          </div>
+          <label>
+            Rules
+            <textarea rows="2" formControlName="rules" placeholder="Participation rules..."></textarea>
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" formControlName="publishNow" />
+            <span>Publish now (visible immediately in Ionic home)</span>
+          </label>
+          @if (createErrorMessage) {
+            <p class="modal-error">{{ createErrorMessage }}</p>
+          }
+          <footer class="raffle-modal__footer">
+            <button type="button" class="ghost" (click)="closeCreateModal()" [disabled]="isCreating">Cancel</button>
+            <button type="submit" class="primary" [disabled]="isCreating">
+              {{ isCreating ? (isUploadingCreateImage ? 'Uploading image...' : 'Creating...') : 'Create Raffle' }}
+            </button>
+          </footer>
+        </form>
+      </article>
+    </section>
+  }
+
+  @if (isViewModalOpen && selectedRaffle) {
+    <section class="raffle-modal-backdrop" (click)="closeViewModal()">
+      <article class="raffle-modal" (click)="$event.stopPropagation()">
+        <header class="raffle-modal__head">
+          <h4>Raffle Details</h4>
+          <button type="button" (click)="closeViewModal()">x</button>
+        </header>
+        @if (isDetailsLoading) {
+          <p class="status-text">Loading raffle details...</p>
+        }
+        @if (!isDetailsLoading) {
+          <div class="raffle-view">
+            <div class="raffle-view__media" [style.background-image]="selectedRaffle.product?.imageUrl ? 'url(' + selectedRaffle.product?.imageUrl + ')' : ''"></div>
+            <div class="raffle-view__meta">
+              <h5>{{ selectedRaffle.product?.title || 'Raffle' }}</h5>
+              <p>ID: {{ selectedRaffle.id }}</p>
+              <p>Status: <strong>{{ selectedRaffle.status }}</strong></p>
+              <p>Ticket Price: <strong>{{ formatFcfa(selectedRaffle.ticketPrice) }}</strong></p>
+              <p>Real Value: <strong>{{ formatFcfa(selectedRaffle.product?.realValue || 0) }}</strong></p>
+              <p>Tickets: <strong>{{ selectedRaffle.ticketsSold }}/{{ selectedRaffle.totalTickets }}</strong></p>
+              <p>Start: <strong>{{ selectedRaffle.startAt | date:'medium' }}</strong></p>
+              <p>End: <strong>{{ selectedRaffle.endAt | date:'medium' }}</strong></p>
+              <p>Rules: <strong>{{ selectedRaffle.rules || 'N/A' }}</strong></p>
+            </div>
+          </div>
+        }
+        <footer class="raffle-modal__footer">
+          <button type="button" class="ghost" (click)="closeViewModal()">Close</button>
+          <button type="button" class="warn" (click)="deleteRaffle(selectedRaffle.id)" [disabled]="isDetailsLoading || isDeletingRaffleId === selectedRaffle.id">Delete</button>
+          <button type="button" class="primary" (click)="openEditModal(selectedRaffle.id)" [disabled]="isDetailsLoading">Edit</button>
+        </footer>
+      </article>
+    </section>
+  }
+
+  @if (isEditModalOpen && selectedRaffle) {
+    <section class="raffle-modal-backdrop" (click)="closeEditModal()">
+      <article class="raffle-modal" (click)="$event.stopPropagation()">
+        <header class="raffle-modal__head">
+          <h4>Edit Raffle</h4>
+          <button type="button" (click)="closeEditModal()" [disabled]="isUpdating">x</button>
+        </header>
+        @if (isDetailsLoading) {
+          <p class="status-text">Refreshing raffle details...</p>
+        }
+        <form class="raffle-modal__form" [formGroup]="editForm" (ngSubmit)="submitEditRaffle()">
+          <div class="grid-3">
+            <label>
+              Ticket Price *
+              <input type="number" min="1" formControlName="ticketPrice" />
+            </label>
+            <label>
+              Currency
+              <input type="text" formControlName="currency" />
+            </label>
+            <label>
+              Status
+              <select formControlName="status">
+                <option value="DRAFT">DRAFT</option>
+                <option value="LIVE">LIVE</option>
+                <option value="CLOSED">CLOSED</option>
+                <option value="DRAWN">DRAWN</option>
+              </select>
+            </label>
+          </div>
+          <div class="grid-2">
+            <label>
+              Start Date
+              <input type="datetime-local" formControlName="startAt" />
+            </label>
+            <label>
+              End Date *
+              <input type="datetime-local" formControlName="endAt" />
+            </label>
+          </div>
+          <label>
+            Rules
+            <textarea rows="3" formControlName="rules" placeholder="Participation rules..."></textarea>
+          </label>
+          @if (updateErrorMessage) {
+            <p class="modal-error">{{ updateErrorMessage }}</p>
+          }
+          <footer class="raffle-modal__footer">
+            <button type="button" class="ghost" (click)="closeEditModal()" [disabled]="isUpdating || isDetailsLoading">Cancel</button>
+            <button type="button" class="warn" (click)="deleteRaffle(selectedRaffle.id)" [disabled]="isUpdating || isDetailsLoading || isDeletingRaffleId === selectedRaffle.id">
               Delete
             </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-
-    <p class="status-text" *ngIf="!isLoading && !errorMessage && !pagedRows.length">
-      No raffle found for current filters.
-    </p>
-
-    <footer class="pager" *ngIf="!isLoading && !errorMessage && filteredRows.length">
-      <span>Showing {{ (page - 1) * pageSize + 1 }} to {{ (page - 1) * pageSize + pagedRows.length }} of {{ filteredRows.length }}</span>
-      <div>
-        <button type="button" (click)="previousPage()" [disabled]="page <= 1">Prev</button>
-        <button type="button" (click)="nextPage()" [disabled]="page >= totalPages">Next</button>
-      </div>
-    </footer>
-  </section>
-
-  <section class="raffle-modal-backdrop" *ngIf="isCreateModalOpen" (click)="closeCreateModal()">
-    <article class="raffle-modal" (click)="$event.stopPropagation()">
-      <header class="raffle-modal__head">
-        <h4>Create New Raffle</h4>
-        <button type="button" (click)="closeCreateModal()" [disabled]="isCreating">x</button>
-      </header>
-
-      <form class="raffle-modal__form" [formGroup]="createForm" (ngSubmit)="submitCreateRaffle()">
-        <div class="grid-2">
-          <label>
-            Product Title *
-            <input type="text" formControlName="title" placeholder="iPhone 16 Pro Max" />
-          </label>
-          <label class="file-field">
-            Product Image (File) *
-            <input type="file" accept="image/*" (change)="onCreateImageSelected($event)" />
-            <small *ngIf="createImageFileName">{{ createImageFileName }}</small>
-          </label>
-        </div>
-
-        <div class="create-image-preview" *ngIf="createImagePreviewUrl">
-          <div
-            class="create-image-preview__media"
-            [style.background-image]="'url(' + createImagePreviewUrl + ')'"></div>
-        </div>
-
-        <label>
-          Description
-          <textarea rows="2" formControlName="description" placeholder="Edition, color, details..."></textarea>
-        </label>
-
-        <div class="grid-3">
-          <label>
-            Real Value (FCFA) *
-            <input type="number" min="0" formControlName="realValue" />
-          </label>
-          <label>
-            Ticket Price (FCFA) *
-            <input type="number" min="1" formControlName="ticketPrice" />
-          </label>
-          <label>
-            Total Tickets *
-            <input type="number" min="1" formControlName="totalTickets" />
-          </label>
-        </div>
-
-        <div class="grid-3">
-          <label>
-            End Date *
-            <input type="datetime-local" formControlName="endAt" />
-          </label>
-          <label>
-            Category
-            <input type="text" formControlName="categoryId" placeholder="GENERAL" />
-          </label>
-          <label>
-            Badge
-            <input type="text" formControlName="badge" placeholder="VIP / GOLD / LIVE" />
-          </label>
-        </div>
-
-        <label>
-          Rules
-          <textarea rows="2" formControlName="rules" placeholder="Participation rules..."></textarea>
-        </label>
-
-        <label class="checkbox-row">
-          <input type="checkbox" formControlName="publishNow" />
-          <span>Publish now (visible immediately in Ionic home)</span>
-        </label>
-
-        <p class="modal-error" *ngIf="createErrorMessage">{{ createErrorMessage }}</p>
-
-        <footer class="raffle-modal__footer">
-          <button type="button" class="ghost" (click)="closeCreateModal()" [disabled]="isCreating">Cancel</button>
-          <button type="submit" class="primary" [disabled]="isCreating">
-            {{ isCreating ? (isUploadingCreateImage ? 'Uploading image...' : 'Creating...') : 'Create Raffle' }}
-          </button>
-        </footer>
-      </form>
-    </article>
-  </section>
-
-  <section class="raffle-modal-backdrop" *ngIf="isViewModalOpen && selectedRaffle" (click)="closeViewModal()">
-    <article class="raffle-modal" (click)="$event.stopPropagation()">
-      <header class="raffle-modal__head">
-        <h4>Raffle Details</h4>
-        <button type="button" (click)="closeViewModal()">x</button>
-      </header>
-
-      <p class="status-text" *ngIf="isDetailsLoading">Loading raffle details...</p>
-
-      <div class="raffle-view" *ngIf="!isDetailsLoading">
-        <div class="raffle-view__media" [style.background-image]="selectedRaffle.product?.imageUrl ? 'url(' + selectedRaffle.product?.imageUrl + ')' : ''"></div>
-        <div class="raffle-view__meta">
-          <h5>{{ selectedRaffle.product?.title || 'Raffle' }}</h5>
-          <p>ID: {{ selectedRaffle.id }}</p>
-          <p>Status: <strong>{{ selectedRaffle.status }}</strong></p>
-          <p>Ticket Price: <strong>{{ formatFcfa(selectedRaffle.ticketPrice) }}</strong></p>
-          <p>Real Value: <strong>{{ formatFcfa(selectedRaffle.product?.realValue || 0) }}</strong></p>
-          <p>Tickets: <strong>{{ selectedRaffle.ticketsSold }}/{{ selectedRaffle.totalTickets }}</strong></p>
-          <p>Start: <strong>{{ selectedRaffle.startAt | date:'medium' }}</strong></p>
-          <p>End: <strong>{{ selectedRaffle.endAt | date:'medium' }}</strong></p>
-          <p>Rules: <strong>{{ selectedRaffle.rules || 'N/A' }}</strong></p>
-        </div>
-      </div>
-
-      <footer class="raffle-modal__footer">
-        <button type="button" class="ghost" (click)="closeViewModal()">Close</button>
-        <button type="button" class="warn" (click)="deleteRaffle(selectedRaffle.id)" [disabled]="isDetailsLoading || isDeletingRaffleId === selectedRaffle.id">Delete</button>
-        <button type="button" class="primary" (click)="openEditModal(selectedRaffle.id)" [disabled]="isDetailsLoading">Edit</button>
-      </footer>
-    </article>
-  </section>
-
-  <section class="raffle-modal-backdrop" *ngIf="isEditModalOpen && selectedRaffle" (click)="closeEditModal()">
-    <article class="raffle-modal" (click)="$event.stopPropagation()">
-      <header class="raffle-modal__head">
-        <h4>Edit Raffle</h4>
-        <button type="button" (click)="closeEditModal()" [disabled]="isUpdating">x</button>
-      </header>
-
-      <p class="status-text" *ngIf="isDetailsLoading">Refreshing raffle details...</p>
-
-      <form class="raffle-modal__form" [formGroup]="editForm" (ngSubmit)="submitEditRaffle()">
-        <div class="grid-3">
-          <label>
-            Ticket Price *
-            <input type="number" min="1" formControlName="ticketPrice" />
-          </label>
-          <label>
-            Currency
-            <input type="text" formControlName="currency" />
-          </label>
-          <label>
-            Status
-            <select formControlName="status">
-              <option value="DRAFT">DRAFT</option>
-              <option value="LIVE">LIVE</option>
-              <option value="CLOSED">CLOSED</option>
-              <option value="DRAWN">DRAWN</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="grid-2">
-          <label>
-            Start Date
-            <input type="datetime-local" formControlName="startAt" />
-          </label>
-          <label>
-            End Date *
-            <input type="datetime-local" formControlName="endAt" />
-          </label>
-        </div>
-
-        <label>
-          Rules
-          <textarea rows="3" formControlName="rules" placeholder="Participation rules..."></textarea>
-        </label>
-
-        <p class="modal-error" *ngIf="updateErrorMessage">{{ updateErrorMessage }}</p>
-
-        <footer class="raffle-modal__footer">
-          <button type="button" class="ghost" (click)="closeEditModal()" [disabled]="isUpdating || isDetailsLoading">Cancel</button>
-          <button type="button" class="warn" (click)="deleteRaffle(selectedRaffle.id)" [disabled]="isUpdating || isDetailsLoading || isDeletingRaffleId === selectedRaffle.id">
-            Delete
-          </button>
-          <button type="submit" class="primary" [disabled]="isUpdating || isDetailsLoading">
-            {{ isUpdating ? 'Saving...' : 'Save Changes' }}
-          </button>
-        </footer>
-      </form>
-    </article>
-  </section>
+            <button type="submit" class="primary" [disabled]="isUpdating || isDetailsLoading">
+              {{ isUpdating ? 'Saving...' : 'Save Changes' }}
+            </button>
+          </footer>
+        </form>
+      </article>
+    </section>
+  }
 </section>

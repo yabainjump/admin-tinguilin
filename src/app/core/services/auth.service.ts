@@ -20,6 +20,31 @@ export class AuthService {
     return localStorage.getItem(this.accessTokenKey);
   }
 
+  get refreshToken(): string | null {
+    return localStorage.getItem(this.refreshTokenKey);
+  }
+
+  /**
+   * Echange le refresh token contre une nouvelle paire de tokens.
+   * Renvoie le nouvel access token, ou une erreur si aucun refresh token
+   * n'est disponible (la session est alors purgee par l'appelant).
+   */
+  refreshTokens(): Observable<string> {
+    const refresh_token = this.refreshToken;
+    if (!refresh_token) {
+      return throwError(() => new Error('NO_REFRESH_TOKEN'));
+    }
+
+    return this.http
+      .post<LoginResponse>(`${this.apiBaseUrl}/auth/refresh`, { refresh_token })
+      .pipe(
+        map((tokens) => {
+          this.persistTokens(tokens);
+          return tokens.access_token;
+        }),
+      );
+  }
+
   get currentUser(): AuthUser | null {
     return this.userSubject.value ?? this.readUserFromToken();
   }

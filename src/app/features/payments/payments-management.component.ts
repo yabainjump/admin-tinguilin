@@ -12,9 +12,10 @@ type TxStatusFilter = 'ALL' | 'PENDING' | 'SUCCESS' | 'FAILED' | 'REFUNDED';
 type DateRangeFilter = 'ALL' | '7D' | '30D' | '90D';
 
 @Component({
-  selector: 'app-payments-management',
-  templateUrl: './payments-management.component.html',
-  styleUrls: ['./payments-management.component.scss'],
+    selector: 'app-payments-management',
+    templateUrl: './payments-management.component.html',
+    styleUrls: ['./payments-management.component.scss'],
+    standalone: false
 })
 export class PaymentsManagementComponent implements OnInit {
   summary: PaymentsSummaryResponse | null = null;

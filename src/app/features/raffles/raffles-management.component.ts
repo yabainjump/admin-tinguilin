@@ -20,9 +20,10 @@ interface RaffleRowView {
 }
 
 @Component({
-  selector: 'app-raffles-management',
-  templateUrl: './raffles-management.component.html',
-  styleUrls: ['./raffles-management.component.scss'],
+    selector: 'app-raffles-management',
+    templateUrl: './raffles-management.component.html',
+    styleUrls: ['./raffles-management.component.scss'],
+    standalone: false
 })
 export class RafflesManagementComponent implements OnInit, OnDestroy {
   isLoading = true;

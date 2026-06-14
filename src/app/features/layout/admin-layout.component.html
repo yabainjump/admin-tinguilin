@@ -9,22 +9,22 @@
     </div>
 
     <nav class="menu">
-      <a
-        *ngFor="let item of menuItems"
-        [routerLink]="item.route"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="{ exact: item.route === '/app/dashboard' }">
-        <span>{{ item.label }}</span>
-      </a>
+      @for (item of menuItems; track item) {
+        <a
+          [routerLink]="item.route"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: item.route === '/app/dashboard' }">
+          <span>{{ item.label }}</span>
+        </a>
+      }
     </nav>
 
     <div class="profile-card">
-      <ng-container *ngIf="userAvatarUrl; else avatarFallback">
+      @if (userAvatarUrl) {
         <img class="avatar" [src]="userAvatarUrl" [alt]="userDisplayName" />
-      </ng-container>
-      <ng-template #avatarFallback>
+      } @else {
         <div class="avatar avatar-fallback">{{ userInitials }}</div>
-      </ng-template>
+      }
       <div class="profile-card__content">
         <strong>{{ userDisplayName }}</strong>
         <small>{{ userEmail }}</small>
@@ -54,50 +54,71 @@
             (focus)="openSearchPanel()"
             (blur)="closeSearchPanel()" />
 
-          <section class="search-results" *ngIf="isSearchOpen">
-            <p class="search-state" *ngIf="isSearching">Searching...</p>
-            <p class="search-state" *ngIf="!isSearching && !hasSearchResults">No result found.</p>
-
-            <div class="result-group" *ngIf="searchResults?.users?.length">
-              <h5>Users</h5>
-              <button type="button" *ngFor="let row of searchResults?.users" (mousedown)="navigateFromSearch(row.route)">
-                <span>{{ row.name }}</span>
-                <small>{{ row.email }}</small>
-              </button>
-            </div>
-
-            <div class="result-group" *ngIf="searchResults?.customers?.length">
-              <h5>Customers</h5>
-              <button type="button" *ngFor="let row of searchResults?.customers" (mousedown)="navigateFromSearch(row.route)">
-                <span>{{ row.name }}</span>
-                <small>{{ row.email }}</small>
-              </button>
-            </div>
-
-            <div class="result-group" *ngIf="searchResults?.payments?.length">
-              <h5>Payments</h5>
-              <button type="button" *ngFor="let row of searchResults?.payments" (mousedown)="navigateFromSearch(row.route)">
-                <span>{{ row.customerName }}</span>
-                <small>{{ row.amount | number:'1.0-0' }} FCFA - {{ row.status }}</small>
-              </button>
-            </div>
-
-            <div class="result-group" *ngIf="searchResults?.raffles?.length">
-              <h5>Raffles</h5>
-              <button type="button" *ngFor="let row of searchResults?.raffles" (mousedown)="navigateFromSearch(row.route)">
-                <span>{{ row.title }}</span>
-                <small>{{ row.status }}</small>
-              </button>
-            </div>
-
-            <div class="result-group" *ngIf="searchResults?.winners?.length">
-              <h5>Winners</h5>
-              <button type="button" *ngFor="let row of searchResults?.winners" (mousedown)="navigateFromSearch(row.route)">
-                <span>{{ row.winnerName }}</span>
-                <small>{{ row.productTitle }}</small>
-              </button>
-            </div>
-          </section>
+          @if (isSearchOpen) {
+            <section class="search-results">
+              @if (isSearching) {
+                <p class="search-state">Searching...</p>
+              }
+              @if (!isSearching && !hasSearchResults) {
+                <p class="search-state">No result found.</p>
+              }
+              @if (searchResults?.users?.length) {
+                <div class="result-group">
+                  <h5>Users</h5>
+                  @for (row of searchResults?.users; track row) {
+                    <button type="button" (mousedown)="navigateFromSearch(row.route)">
+                      <span>{{ row.name }}</span>
+                      <small>{{ row.email }}</small>
+                    </button>
+                  }
+                </div>
+              }
+              @if (searchResults?.customers?.length) {
+                <div class="result-group">
+                  <h5>Customers</h5>
+                  @for (row of searchResults?.customers; track row) {
+                    <button type="button" (mousedown)="navigateFromSearch(row.route)">
+                      <span>{{ row.name }}</span>
+                      <small>{{ row.email }}</small>
+                    </button>
+                  }
+                </div>
+              }
+              @if (searchResults?.payments?.length) {
+                <div class="result-group">
+                  <h5>Payments</h5>
+                  @for (row of searchResults?.payments; track row) {
+                    <button type="button" (mousedown)="navigateFromSearch(row.route)">
+                      <span>{{ row.customerName }}</span>
+                      <small>{{ row.amount | number:'1.0-0' }} FCFA - {{ row.status }}</small>
+                    </button>
+                  }
+                </div>
+              }
+              @if (searchResults?.raffles?.length) {
+                <div class="result-group">
+                  <h5>Raffles</h5>
+                  @for (row of searchResults?.raffles; track row) {
+                    <button type="button" (mousedown)="navigateFromSearch(row.route)">
+                      <span>{{ row.title }}</span>
+                      <small>{{ row.status }}</small>
+                    </button>
+                  }
+                </div>
+              }
+              @if (searchResults?.winners?.length) {
+                <div class="result-group">
+                  <h5>Winners</h5>
+                  @for (row of searchResults?.winners; track row) {
+                    <button type="button" (mousedown)="navigateFromSearch(row.route)">
+                      <span>{{ row.winnerName }}</span>
+                      <small>{{ row.productTitle }}</small>
+                    </button>
+                  }
+                </div>
+              }
+            </section>
+          }
         </label>
         <button type="button" class="primary-button" (click)="onNewRaffleClick()">+ New Raffle</button>
       </div>

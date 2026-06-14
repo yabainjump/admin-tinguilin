@@ -1,35 +1,40 @@
 <section class="settings-page">
-  <p class="status-text" *ngIf="isLoading">Loading settings...</p>
-  <p class="status-text error" *ngIf="!isLoading && errorMessage">{{ errorMessage }}</p>
+  @if (isLoading) {
+    <p class="status-text">Loading settings...</p>
+  }
+  @if (!isLoading && errorMessage) {
+    <p class="status-text error">{{ errorMessage }}</p>
+  }
 
-  <div class="cards" *ngIf="!isLoading && !errorMessage">
-    <article>
-      <h4>Session</h4>
-      <p>Email: {{ authUser?.email }}</p>
-      <p>Role: {{ authUser?.role }}</p>
-    </article>
-
-    <article>
-      <h4>Profile</h4>
-      <div class="profile-head">
-        <ng-container *ngIf="profileAvatar; else settingsAvatarFallback">
-          <img class="avatar" [src]="profileAvatar" [alt]="(profile?.firstName || '') + ' ' + (profile?.lastName || '')" />
-        </ng-container>
-        <ng-template #settingsAvatarFallback>
-          <span class="avatar avatar-fallback">{{ profileInitials }}</span>
-        </ng-template>
-      </div>
-      <p>Name: {{ profile?.firstName }} {{ profile?.lastName }}</p>
-      <p>Phone: {{ profile?.phone }}</p>
-      <p>Free tickets: {{ profile?.freeTicketsBalance }}</p>
-
-      <div class="avatar-actions">
-        <input type="file" accept="image/*" (change)="onAvatarSelected($event)" />
-        <button type="button" (click)="uploadAvatar()" [disabled]="!selectedAvatarFile || isUploadingAvatar">
-          {{ isUploadingAvatar ? 'Uploading...' : 'Upload Avatar' }}
-        </button>
-      </div>
-      <p class="upload-message" *ngIf="uploadMessage">{{ uploadMessage }}</p>
-    </article>
-  </div>
+  @if (!isLoading && !errorMessage) {
+    <div class="cards">
+      <article>
+        <h4>Session</h4>
+        <p>Email: {{ authUser?.email }}</p>
+        <p>Role: {{ authUser?.role }}</p>
+      </article>
+      <article>
+        <h4>Profile</h4>
+        <div class="profile-head">
+          @if (profileAvatar) {
+            <img class="avatar" [src]="profileAvatar" [alt]="(profile?.firstName || '') + ' ' + (profile?.lastName || '')" />
+          } @else {
+            <span class="avatar avatar-fallback">{{ profileInitials }}</span>
+          }
+        </div>
+        <p>Name: {{ profile?.firstName }} {{ profile?.lastName }}</p>
+        <p>Phone: {{ profile?.phone }}</p>
+        <p>Free tickets: {{ profile?.freeTicketsBalance }}</p>
+        <div class="avatar-actions">
+          <input type="file" accept="image/*" (change)="onAvatarSelected($event)" />
+          <button type="button" (click)="uploadAvatar()" [disabled]="!selectedAvatarFile || isUploadingAvatar">
+            {{ isUploadingAvatar ? 'Uploading...' : 'Upload Avatar' }}
+          </button>
+        </div>
+        @if (uploadMessage) {
+          <p class="upload-message">{{ uploadMessage }}</p>
+        }
+      </article>
+    </div>
+  }
 </section>
