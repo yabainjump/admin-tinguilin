@@ -18,6 +18,21 @@ REPO_DIR="${REPO_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 DOCROOT="${DOCROOT:-$HOME/public_html/admin.tinguilin.yaba-in.com}"
 BUILD_DIR="dist/admin-tinguilin"                  # outputPath de angular.json
 
+# --- Garde-fous anti-catastrophe (rsync --delete) ------------------------------
+case "$DOCROOT" in
+  "" ) echo "ERREUR: DOCROOT non defini."; exit 1 ;;
+  "$HOME/public_html" | "$HOME/public_html/" )
+    echo "ERREUR: DOCROOT ne doit JAMAIS etre le public_html partage."
+    exit 1 ;;
+esac
+# Le repo ne doit PAS etre a l'interieur du docroot.
+case "$REPO_DIR/" in
+  "$DOCROOT"/* )
+    echo "ERREUR: le repo ($REPO_DIR) est DANS le docroot ($DOCROOT)."
+    echo "Clone le repo hors docroot, ex: ~/repos/admin-tinguilin"
+    exit 1 ;;
+esac
+
 if [ -z "${NODE_BIN:-}" ]; then
   if   [ -d /opt/cpanel/ea-nodejs22/bin ]; then NODE_BIN="/opt/cpanel/ea-nodejs22/bin"
   elif [ -d /opt/cpanel/ea-nodejs20/bin ]; then NODE_BIN="/opt/cpanel/ea-nodejs20/bin"
