@@ -74,7 +74,15 @@ export class AuthInterceptor implements HttpInterceptor {
             return next.handle(retried);
           }),
           catchError((refreshError: unknown) => {
-            this.forceLogout();
+            // On ne deconnecte QUE si le rejeu echoue encore pour cause d'auth
+            // (401). Une erreur transitoire (500, timeout, reseau) ne doit pas
+            // tuer la session admin.
+            if (
+              refreshError instanceof HttpErrorResponse &&
+              refreshError.status === 401
+            ) {
+              this.forceLogout();
+            }
             return throwError(() => refreshError);
           }),
         );
