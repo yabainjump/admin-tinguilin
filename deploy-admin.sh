@@ -58,6 +58,14 @@ if [ -f package-lock.json ]; then "$NPM" ci --no-audit --no-fund; else "$NPM" in
 mkdir -p "$DOCROOT"
 
 cat > "$BUILD_DIR/.htaccess" <<'HTACCESS'
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "DENY"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+  Header always set Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; font-src 'self' data:; connect-src 'self' https://backend.tinguilin.yaba-in.com wss://backend.tinguilin.yaba-in.com; worker-src 'self' blob:; manifest-src 'self'"
+</IfModule>
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /

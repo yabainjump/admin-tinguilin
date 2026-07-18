@@ -54,7 +54,7 @@ export class AuthInterceptor implements HttpInterceptor {
           !isLoginRequest &&
           !isRefreshRequest &&
           !alreadyRetried &&
-          !!this.authService.refreshToken;
+          this.authService.hasRefreshSession();
 
         if (!shouldAttemptRefresh) {
           if (is401 && (isRefreshRequest || alreadyRetried)) {

@@ -9,6 +9,7 @@ export class AuthService {
   private readonly apiBaseUrl = environment.apiBaseUrl;
   private readonly accessTokenKey = 'admin_access_token';
   private readonly refreshTokenKey = 'admin_refresh_token';
+  private readonly sessionKey = 'admin_session';
   private readonly userKey = 'admin_user';
 
   private readonly userSubject = new BehaviorSubject<AuthUser | null>(this.readStoredUser());
@@ -17,11 +18,11 @@ export class AuthService {
   constructor(private readonly http: HttpClient) {}
 
   get accessToken(): string | null {
-    return localStorage.getItem(this.accessTokenKey);
+    return sessionStorage.getItem(this.accessTokenKey);
   }
 
   get refreshToken(): string | null {
-    return localStorage.getItem(this.refreshTokenKey);
+    return null;
   }
 
   /**
@@ -30,13 +31,12 @@ export class AuthService {
    * n'est disponible (la session est alors purgee par l'appelant).
    */
   refreshTokens(): Observable<string> {
-    const refresh_token = this.refreshToken;
-    if (!refresh_token) {
+    if (!this.hasRefreshSession()) {
       return throwError(() => new Error('NO_REFRESH_TOKEN'));
     }
 
     return this.http
-      .post<LoginResponse>(`${this.apiBaseUrl}/auth/refresh`, { refresh_token })
+      .post<LoginResponse>(`${this.apiBaseUrl}/auth/refresh`, {}, { withCredentials: true })
       .pipe(
         map((tokens) => {
           this.persistTokens(tokens);
@@ -52,7 +52,7 @@ export class AuthService {
   isAdminAuthenticated(): boolean {
     const token = this.accessToken;
     if (!token) {
-      return false;
+      return this.hasRefreshSession() && this.currentUser?.role === 'ADMIN';
     }
 
     const payload = this.parseTokenPayload(token);
@@ -63,7 +63,7 @@ export class AuthService {
     if (typeof payload.exp === 'number') {
       const nowInSeconds = Math.floor(Date.now() / 1000);
       if (payload.exp <= nowInSeconds) {
-        return false;
+        return this.hasRefreshSession() && this.currentUser?.role === 'ADMIN';
       }
     }
 
@@ -72,7 +72,7 @@ export class AuthService {
 
   login(credentials: LoginRequest): Observable<void> {
     return this.http
-      .post<LoginResponse>(`${this.apiBaseUrl}/auth/admin/login`, credentials)
+      .post<LoginResponse>(`${this.apiBaseUrl}/auth/admin/login`, credentials, { withCredentials: true })
       .pipe(
         catchError((error) => {
           // Backward compatibility while backend route is being deployed.
@@ -80,6 +80,7 @@ export class AuthService {
             return this.http.post<LoginResponse>(
               `${this.apiBaseUrl}/auth/login`,
               credentials,
+              { withCredentials: true },
             );
           }
           return throwError(() => error);
@@ -130,12 +131,23 @@ export class AuthService {
   }
 
   logout(): void {
+    const token = this.accessToken;
+    this.http.post(
+      `${this.apiBaseUrl}/auth/logout`,
+      {},
+      {
+        withCredentials: true,
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      },
+    ).subscribe({ error: () => undefined });
     this.clearSession();
   }
 
   private persistTokens(tokens: LoginResponse): void {
-    localStorage.setItem(this.accessTokenKey, tokens.access_token);
-    localStorage.setItem(this.refreshTokenKey, tokens.refresh_token);
+    sessionStorage.setItem(this.accessTokenKey, tokens.access_token);
+    localStorage.removeItem(this.accessTokenKey);
+    localStorage.removeItem(this.refreshTokenKey);
+    localStorage.setItem(this.sessionKey, '1');
   }
 
   private persistUser(user: AuthUser): void {
@@ -144,8 +156,10 @@ export class AuthService {
   }
 
   private clearSession(): void {
+    sessionStorage.removeItem(this.accessTokenKey);
     localStorage.removeItem(this.accessTokenKey);
     localStorage.removeItem(this.refreshTokenKey);
+    localStorage.removeItem(this.sessionKey);
     localStorage.removeItem(this.userKey);
     this.userSubject.next(null);
   }
@@ -175,6 +189,10 @@ export class AuthService {
     }
 
     return payload;
+  }
+
+  hasRefreshSession(): boolean {
+    return localStorage.getItem(this.sessionKey) === '1';
   }
 
   private parseTokenPayload(token: string): AuthUser | null {
