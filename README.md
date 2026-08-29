@@ -18,6 +18,23 @@ Run `ng build` to build the project. The build artifacts will be stored in the `
 
 Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
 
+## Spec Kit
+
+Ce dépôt utilise GitHub Spec Kit `v1.0.1` avec l'intégration Codex. Les règles
+de sécurité administrative, de validation et de qualité sont définies dans
+`.specify/memory/constitution.md`; les skills sont dans `.agents/skills/`.
+
+Pour une nouvelle fonctionnalité, ouvrir Codex depuis ce dossier puis suivre :
+
+```text
+$speckit-specify → $speckit-clarify → $speckit-plan
+→ $speckit-tasks → $speckit-analyze → $speckit-implement
+→ $speckit-converge
+```
+
+Les artefacts sont versionnés dans `specs/`. Toute mutation ou permission
+nouvelle doit référencer la spec du contrat correspondant dans `tingilin-api`.
+
 ## Running end-to-end tests
 
 Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
