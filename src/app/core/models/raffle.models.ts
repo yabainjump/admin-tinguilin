@@ -1,10 +1,13 @@
 export type RaffleStatus = 'DRAFT' | 'LIVE' | 'CLOSED' | 'DRAWN';
 
+export type RaffleRegion = 'CENTRE' | 'LITTORAL' | 'OUEST' | 'SUD_OUEST';
+
 export interface AdminRaffleProduct {
   id: string;
   title: string;
   realValue: number;
   imageUrl: string;
+  region?: string;
 }
 
 export interface AdminRaffle {

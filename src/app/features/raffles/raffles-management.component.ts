@@ -2,7 +2,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription, finalize, switchMap } from 'rxjs';
-import { AdminRaffle } from '../../core/models/raffle.models';
+import { AdminRaffle, RaffleRegion } from '../../core/models/raffle.models';
 import { RafflesApiService } from '../../core/services/raffles-api.service';
 
 type RafflesFilter = 'ALL' | 'LIVE' | 'ENDED';
@@ -13,6 +13,7 @@ interface RaffleRowView {
   imageUrl: string;
   realPrice: string;
   ticketPrice: string;
+  regionLabel: string;
   progress: number;
   soldText: string;
   statusLabel: string;
@@ -49,11 +50,19 @@ export class RafflesManagementComponent implements OnInit, OnDestroy {
   createImagePreviewUrl: string | null = null;
   createImageFileName = '';
 
+  readonly regionOptions: ReadonlyArray<{ value: RaffleRegion; label: string }> = [
+    { value: 'CENTRE', label: 'Centre' },
+    { value: 'LITTORAL', label: 'Littoral' },
+    { value: 'OUEST', label: 'Ouest' },
+    { value: 'SUD_OUEST', label: 'Sud-Ouest' },
+  ];
+
   readonly createForm = this.formBuilder.nonNullable.group({
     title: ['', [Validators.required, Validators.minLength(3)]],
     description: [''],
     imageUrl: [''],
     categoryId: ['GENERAL'],
+    region: ['' as RaffleRegion | '', [Validators.required]],
     realValue: [0, [Validators.required, Validators.min(0)]],
     ticketPrice: [100, [Validators.required, Validators.min(1)]],
     totalTickets: [1000, [Validators.required, Validators.min(1)]],
@@ -189,6 +198,7 @@ export class RafflesManagementComponent implements OnInit, OnDestroy {
       description: '',
       imageUrl: '',
       categoryId: 'GENERAL',
+      region: '',
       realValue: 0,
       ticketPrice: 100,
       totalTickets: 1000,
@@ -271,6 +281,7 @@ export class RafflesManagementComponent implements OnInit, OnDestroy {
               description: formValue.description.trim() || undefined,
               imageUrl,
               categoryId: formValue.categoryId.trim() || 'GENERAL',
+              region: formValue.region || undefined,
               realValue: Number(formValue.realValue),
             },
             raffle: {
@@ -532,11 +543,18 @@ export class RafflesManagementComponent implements OnInit, OnDestroy {
       imageUrl: raffle.product?.imageUrl || '',
       realPrice: this.toMoney(raffle.product?.realValue ?? 0),
       ticketPrice: this.toMoney(raffle.ticketPrice),
+      regionLabel: this.toRegionLabel(raffle.product?.region),
       progress,
       soldText: `${raffle.ticketsSold}/${raffle.totalTickets}`,
       statusLabel: this.toStatusLabel(raffle.status),
       statusTone: this.toStatusTone(raffle.status),
     };
+  }
+
+  toRegionLabel(region?: string): string {
+    const normalized = String(region ?? '').trim().toUpperCase();
+    const match = this.regionOptions.find((option) => option.value === normalized);
+    return match?.label ?? '—';
   }
 
   private toStatusLabel(status: AdminRaffle['status']): string {

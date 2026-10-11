@@ -56,6 +56,7 @@
             <th>Real Price</th>
             <th>Ticket Price</th>
             <th>Progress</th>
+            <th>Region</th>
             <th>Status</th>
             <th>Actions</th>
           </tr>
@@ -72,6 +73,9 @@
               <td>
                 <p>{{ row.progress }}% sold ({{ row.soldText }})</p>
                 <div class="progress"><div [style.width.%]="row.progress"></div></div>
+              </td>
+              <td>
+                <span class="region-badge">{{ row.regionLabel }}</span>
               </td>
               <td>
                 <span class="status-pill" [ngClass]="row.statusTone">{{ row.statusLabel }}</span>
@@ -171,6 +175,15 @@
             </label>
           </div>
           <label>
+            Region de diffusion *
+            <select formControlName="region">
+              <option value="">-- Select a region --</option>
+              @for (option of regionOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </label>
+          <label>
             Rules
             <textarea rows="2" formControlName="rules" placeholder="Participation rules..."></textarea>
           </label>
@@ -238,6 +251,10 @@
           <p class="status-text">Refreshing raffle details...</p>
         }
         <form class="raffle-modal__form" [formGroup]="editForm" (ngSubmit)="submitEditRaffle()">
+          <label>
+            Region
+            <input type="text" [value]="toRegionLabel(selectedRaffle.product?.region)" disabled />
+          </label>
           <div class="grid-3">
             <label>
               Ticket Price *

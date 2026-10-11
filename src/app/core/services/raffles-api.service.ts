@@ -2,7 +2,12 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AdminRaffle, WinnersResponse, WinnersResponseItem } from '../models/raffle.models';
+import {
+  AdminRaffle,
+  RaffleRegion,
+  WinnersResponse,
+  WinnersResponseItem,
+} from '../models/raffle.models';
 
 @Injectable({ providedIn: 'root' })
 export class RafflesApiService {
@@ -43,6 +48,7 @@ export class RafflesApiService {
       imageUrl: string;
       categoryId?: string;
       realValue?: number;
+      region?: RaffleRegion;
     };
     raffle: {
       ticketPrice: number;
@@ -118,6 +124,7 @@ export class RafflesApiService {
             title: String(productRaw['title'] ?? ''),
             realValue: Number(productRaw['realValue'] ?? 0),
             imageUrl: this.resolveImageUrl(productRaw['imageUrl']),
+            region: String(productRaw['region'] ?? '').trim() || undefined,
           }
         : null;
 
