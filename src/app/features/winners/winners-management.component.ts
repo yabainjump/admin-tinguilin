@@ -1,4 +1,6 @@
 import { Component, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import {
   AdminRaffle,
 } from '../../core/models/raffle.models';
@@ -54,20 +56,28 @@ export class WinnersManagementComponent implements OnInit {
     totalWinners: 0,
   };
 
+  private readonly searchTerms = new Subject<string>();
+
   constructor(
     private readonly adminApi: AdminApiService,
     private readonly rafflesApi: RafflesApiService,
-  ) {}
+  ) {
+    this.searchTerms
+      .pipe(debounceTime(350), distinctUntilChanged(), takeUntilDestroyed())
+      .subscribe((value) => {
+        this.infoMessage = '';
+        this.searchTerm = value;
+        this.page = 1;
+        this.loadWinners();
+      });
+  }
 
   ngOnInit(): void {
     this.loadWinners();
   }
 
   onSearch(value: string): void {
-    this.infoMessage = '';
-    this.searchTerm = value;
-    this.page = 1;
-    this.loadWinners();
+    this.searchTerms.next(value);
   }
 
   setTab(tab: WinnersTab): void {

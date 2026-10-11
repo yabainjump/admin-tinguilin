@@ -22,15 +22,8 @@ export class AuthInterceptor implements HttpInterceptor {
     const isApiRequest = req.url.startsWith(environment.apiBaseUrl);
     const isLoginRequest = req.url.endsWith('/auth/login') || req.url.endsWith('/auth/admin/login');
     const isRefreshRequest = req.url.endsWith('/auth/refresh');
-    const isGetRequest = req.method.toUpperCase() === 'GET';
 
     let requestToHandle = req;
-
-    if (isApiRequest && isGetRequest && !req.params.has('_ts')) {
-      requestToHandle = requestToHandle.clone({
-        setParams: { _ts: Date.now().toString() },
-      });
-    }
 
     const skipAuthHeader =
       !token || !isApiRequest || isLoginRequest || req.headers.has('Authorization');

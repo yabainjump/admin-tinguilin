@@ -39,6 +39,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
 
   private routeSubscription?: Subscription;
   private searchTimeout?: ReturnType<typeof setTimeout>;
+  private searchSubscription?: Subscription;
 
   constructor(
     private readonly adminApi: AdminApiService,
@@ -60,6 +61,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     if (this.searchTimeout) {
       clearTimeout(this.searchTimeout);
     }
+    this.searchSubscription?.unsubscribe();
   }
 
   get userEmail(): string {
@@ -118,7 +120,8 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
 
     this.isSearching = true;
     this.searchTimeout = setTimeout(() => {
-      this.adminApi.globalSearch(query, 5).subscribe({
+      this.searchSubscription?.unsubscribe();
+      this.searchSubscription = this.adminApi.globalSearch(query, 5).subscribe({
         next: (res) => {
           this.searchResults = res;
           this.isSearchOpen = true;

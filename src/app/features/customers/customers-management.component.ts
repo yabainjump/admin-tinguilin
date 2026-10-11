@@ -1,4 +1,6 @@
 import { Component, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { AdminUsersResponseItem } from '../../core/models/admin.models';
 import { AdminApiService } from '../../core/services/admin-api.service';
 import { resolveAvatarUrl } from '../../core/utils/avatar.util';
@@ -25,7 +27,17 @@ export class CustomersManagementComponent implements OnInit {
   total = 0;
   totalPages = 1;
 
-  constructor(private readonly adminApi: AdminApiService) {}
+  private readonly searchTerms = new Subject<string>();
+
+  constructor(private readonly adminApi: AdminApiService) {
+    this.searchTerms
+      .pipe(debounceTime(350), distinctUntilChanged(), takeUntilDestroyed())
+      .subscribe((value) => {
+        this.searchTerm = value;
+        this.page = 1;
+        this.loadCustomers();
+      });
+  }
 
   ngOnInit(): void {
     this.loadCustomers();
@@ -48,9 +60,7 @@ export class CustomersManagementComponent implements OnInit {
   }
 
   onSearch(value: string): void {
-    this.searchTerm = value;
-    this.page = 1;
-    this.loadCustomers();
+    this.searchTerms.next(value);
   }
 
   previousPage(): void {

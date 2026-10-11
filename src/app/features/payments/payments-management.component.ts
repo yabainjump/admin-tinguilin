@@ -1,4 +1,6 @@
 import { Component, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import {
   AdminTransactionItem,
   PaymentsReconciliationResponse,
@@ -36,7 +38,17 @@ export class PaymentsManagementComponent implements OnInit {
   total = 0;
   totalPages = 1;
 
-  constructor(private readonly adminApi: AdminApiService) {}
+  private readonly searchTerms = new Subject<string>();
+
+  constructor(private readonly adminApi: AdminApiService) {
+    this.searchTerms
+      .pipe(debounceTime(350), distinctUntilChanged(), takeUntilDestroyed())
+      .subscribe((value) => {
+        this.searchTerm = value;
+        this.page = 1;
+        this.loadTransactions();
+      });
+  }
 
   ngOnInit(): void {
     this.loadData();
@@ -96,9 +108,7 @@ export class PaymentsManagementComponent implements OnInit {
   }
 
   onSearch(value: string): void {
-    this.searchTerm = value;
-    this.page = 1;
-    this.loadTransactions();
+    this.searchTerms.next(value);
   }
 
   previousPage(): void {

@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, Validators } from '@angular/forms';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { AdminUsersResponseItem } from '../../core/models/admin.models';
 import { AdminApiService } from '../../core/services/admin-api.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -31,6 +33,7 @@ export class UsersManagementComponent implements OnInit {
   totalPages = 1;
 
   users: AdminUsersResponseItem[] = [];
+  private readonly searchTerms = new Subject<string>();
   readonly inviteForm = this.fb.group({
     firstName: ['', [Validators.required]],
     lastName: ['', [Validators.required]],
@@ -44,17 +47,23 @@ export class UsersManagementComponent implements OnInit {
     private readonly fb: FormBuilder,
     private readonly adminApi: AdminApiService,
     private readonly authService: AuthService,
-  ) {}
+  ) {
+    this.searchTerms
+      .pipe(debounceTime(350), distinctUntilChanged(), takeUntilDestroyed())
+      .subscribe((value) => {
+        this.infoMessage = '';
+        this.searchTerm = value;
+        this.page = 1;
+        this.loadUsers();
+      });
+  }
 
   ngOnInit(): void {
     this.loadUsers();
   }
 
   onSearch(value: string): void {
-    this.infoMessage = '';
-    this.searchTerm = value;
-    this.page = 1;
-    this.loadUsers();
+    this.searchTerms.next(value);
   }
 
   setTab(tab: UsersTab): void {
