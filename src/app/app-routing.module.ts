@@ -10,6 +10,7 @@ import { RafflesManagementComponent } from './features/raffles/raffles-managemen
 import { SettingsComponent } from './features/settings/settings.component';
 import { UsersManagementComponent } from './features/users/users-management.component';
 import { WinnersManagementComponent } from './features/winners/winners-management.component';
+import { PollsManagementComponent } from './features/polls/polls-management.component';
 
 const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -54,6 +55,14 @@ const routes: Routes = [
         path: 'winners',
         component: WinnersManagementComponent,
         data: { title: 'Winners', subtitle: 'Published winners feed from backend.' },
+      },
+      {
+        path: 'polls',
+        component: PollsManagementComponent,
+        data: {
+          title: 'Sondages',
+          subtitle: 'Choisis le prochain lot : les joueurs votent pour le prochain lot mis en jeu.',
+        },
       },
       {
         path: 'settings',

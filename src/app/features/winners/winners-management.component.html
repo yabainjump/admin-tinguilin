@@ -98,6 +98,20 @@
                   (click)="openWinnerContact(row)">
                   Contact
                 </button>
+                @if (row.status === 'DELIVERED') {
+                  <button
+                    type="button"
+                    class="action proof"
+                    [disabled]="actionInProgressRaffleId === row.raffleId"
+                    (click)="openDeliveryProof(row)">
+                    Preuve de remise
+                    @if (row.deliveryProof) {
+                      <span class="proof-flag">Publiée</span>
+                    }
+                  </button>
+                } @else {
+                  <small class="proof-hint">Preuve de remise : marquer d'abord le lot comme livré.</small>
+                }
               </td>
             </tr>
           }
@@ -300,6 +314,114 @@
           Send Email
         </a>
       </footer>
+    </section>
+  </div>
+}
+
+@if (proofTarget) {
+  <div class="modal-backdrop">
+    <section class="modal-card proof-modal" role="dialog" aria-modal="true" aria-labelledby="proof-modal-title">
+      <header>
+        <h4 id="proof-modal-title">Preuve de remise</h4>
+        <button type="button" (click)="closeDeliveryProof()" [disabled]="isProofBusy" aria-label="Fermer">x</button>
+      </header>
+      <p class="hint">
+        <strong>{{ proofTarget.winnerName }}</strong> &middot; {{ proofTarget.productTitle }}
+      </p>
+
+      @if (proofTarget.status !== 'DELIVERED') {
+        <p class="status-text">
+          Le lot doit d'abord être marqué comme livré (statut « Delivered ») avant de publier une preuve de remise.
+        </p>
+      } @else {
+        @if (proofTarget.deliveryProof) {
+          <div class="proof-current">
+            @if (deliveryProofImage(proofTarget); as proofImage) {
+              <img class="proof-thumb" [src]="proofImage" [alt]="'Remise du lot à ' + proofTarget.winnerName" />
+            } @else {
+              <span class="proof-thumb"></span>
+            }
+            <div>
+              <small>Preuve publiée le {{ proofTarget.deliveryProof.publishedAt | date:'d MMM y, HH:mm' }}</small>
+              @if (proofTarget.deliveryProof.testimonial) {
+                <blockquote>« {{ proofTarget.deliveryProof.testimonial }} »</blockquote>
+              } @else {
+                <span>Aucun témoignage.</span>
+              }
+              @if (!isConfirmingProofRemoval) {
+                <button type="button" class="action danger" (click)="askRemoveDeliveryProof()" [disabled]="isProofBusy">
+                  Retirer la preuve
+                </button>
+              } @else {
+                <div class="inline-confirm" role="alert">
+                  <span>Retirer définitivement la photo et le témoignage publiés ?</span>
+                  <footer>
+                    <button type="button" class="secondary" (click)="cancelRemoveDeliveryProof()" [disabled]="isRemovingProof">
+                      Annuler
+                    </button>
+                    <button type="button" class="danger" (click)="confirmRemoveDeliveryProof()" [disabled]="isRemovingProof">
+                      {{ isRemovingProof ? 'Retrait...' : 'Oui, retirer' }}
+                    </button>
+                  </footer>
+                </div>
+              }
+            </div>
+          </div>
+          <p class="hint">Publier une nouvelle preuve remplacera celle-ci.</p>
+        }
+
+        <form class="proof-form" (ngSubmit)="submitDeliveryProof()">
+          <label>
+            Photo de remise (JPEG, PNG, WebP ou GIF, 6 Mo max)
+            <input
+              type="file"
+              [accept]="proofImageAccept"
+              (change)="onProofFileSelected($event)"
+              [disabled]="isProofBusy" />
+          </label>
+          @if (proofPreviewUrl) {
+            <div class="proof-preview">
+              <img [src]="proofPreviewUrl" alt="Aperçu de la photo de remise" />
+              <small>{{ proofFileName }}</small>
+            </div>
+          }
+
+          <label>
+            Témoignage (optionnel)
+            <textarea
+              rows="3"
+              [maxLength]="testimonialMaxLength"
+              [value]="proofTestimonial"
+              (input)="onProofTestimonialInput(($any($event.target)).value)"
+              [disabled]="isProofBusy"
+              placeholder="Ex : Merci Tinguilin, j'ai bien reçu mon lot !"></textarea>
+            <small class="counter" [class.limit]="proofTestimonial.length >= testimonialMaxLength">
+              {{ proofTestimonial.length }} / {{ testimonialMaxLength }}
+            </small>
+          </label>
+
+          <label class="consent">
+            <input
+              type="checkbox"
+              name="proofConsent"
+              [(ngModel)]="proofConsent"
+              [disabled]="isProofBusy" />
+            <span>Le gagnant a donné son accord pour publier sa photo et son témoignage</span>
+          </label>
+
+          @if (proofErrorMessage) {
+            <p class="modal-error">{{ proofErrorMessage }}</p>
+          }
+
+          <footer>
+            <button type="button" class="secondary" (click)="closeDeliveryProof()" [disabled]="isProofBusy">Annuler</button>
+            <button type="submit" [disabled]="!canSubmitProof">
+              {{ isSubmittingProof ? 'Publication...' : 'Publier la preuve' }}
+            </button>
+          </footer>
+        </form>
+      }
+
     </section>
   </div>
 }

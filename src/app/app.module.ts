@@ -14,6 +14,7 @@ import { RafflesManagementComponent } from './features/raffles/raffles-managemen
 import { SettingsComponent } from './features/settings/settings.component';
 import { UsersManagementComponent } from './features/users/users-management.component';
 import { WinnersManagementComponent } from './features/winners/winners-management.component';
+import { PollsManagementComponent } from './features/polls/polls-management.component';
 import { AuthInterceptor } from './core/interceptors/auth.interceptor';
 
 @NgModule({ declarations: [
@@ -27,6 +28,7 @@ import { AuthInterceptor } from './core/interceptors/auth.interceptor';
         WinnersManagementComponent,
         SettingsComponent,
         RafflesManagementComponent,
+        PollsManagementComponent,
     ],
     bootstrap: [AppComponent], imports: [BrowserModule,
         AppRoutingModule,

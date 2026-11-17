@@ -29,6 +29,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     { label: 'Customers', route: '/app/customers' },
     { label: 'Finances', route: '/app/payments' },
     { label: 'Winners', route: '/app/winners' },
+    { label: 'Sondages', route: '/app/polls' },
     { label: 'Settings', route: '/app/settings' },
   ];
 

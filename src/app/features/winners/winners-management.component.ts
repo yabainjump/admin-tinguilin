@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import {
@@ -12,6 +12,9 @@ import {
 import { AdminApiService } from '../../core/services/admin-api.service';
 import { RafflesApiService } from '../../core/services/raffles-api.service';
 import { resolveAvatarUrl } from '../../core/utils/avatar.util';
+import { apiErrorMessage } from '../../core/utils/api-error.util';
+import { UPLOAD_IMAGE_ACCEPT, validateUploadImage } from '../../core/utils/image-file.util';
+import { resolveUploadUrl } from '../../core/utils/upload-url.util';
 import { environment } from '../../../environments/environment';
 
 type WinnersTab = 'ALL' | 'PENDING_VERIFICATION' | 'IN_SHIPPING' | 'DELIVERED';
@@ -22,7 +25,7 @@ type WinnersTab = 'ALL' | 'PENDING_VERIFICATION' | 'IN_SHIPPING' | 'DELIVERED';
     styleUrls: ['./winners-management.component.scss'],
     standalone: false
 })
-export class WinnersManagementComponent implements OnInit {
+export class WinnersManagementComponent implements OnInit, OnDestroy {
   isLoading = true;
   isExporting = false;
   errorMessage = '';
@@ -38,6 +41,20 @@ export class WinnersManagementComponent implements OnInit {
   statusTargetWinner: AdminWinnerItem | null = null;
   statusTargetNext: WinnerWorkflowStatus | null = null;
   statusConfirmErrorMessage = '';
+
+  // Preuve de remise (photo + temoignage) d'un gagnant livre.
+  readonly testimonialMaxLength = 280;
+  readonly proofImageAccept = UPLOAD_IMAGE_ACCEPT;
+  proofTarget: AdminWinnerItem | null = null;
+  proofFile: File | null = null;
+  proofFileName = '';
+  proofPreviewUrl = '';
+  proofTestimonial = '';
+  proofConsent = false;
+  isSubmittingProof = false;
+  isRemovingProof = false;
+  isConfirmingProofRemoval = false;
+  proofErrorMessage = '';
 
   searchTerm = '';
   activeTab: WinnersTab = 'ALL';
@@ -74,6 +91,10 @@ export class WinnersManagementComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadWinners();
+  }
+
+  ngOnDestroy(): void {
+    this.revokeProofPreview();
   }
 
   onSearch(value: string): void {
@@ -158,6 +179,162 @@ export class WinnersManagementComponent implements OnInit {
 
   closeWinnerContact(): void {
     this.selectedWinnerContact = null;
+  }
+
+  // ------------------------------------------------------ preuve de remise
+
+  get isProofBusy(): boolean {
+    return this.isSubmittingProof || this.isRemovingProof;
+  }
+
+  get canSubmitProof(): boolean {
+    return (
+      !!this.proofTarget &&
+      this.proofTarget.status === 'DELIVERED' &&
+      !!this.proofFile &&
+      this.proofConsent &&
+      this.proofTestimonial.length <= this.testimonialMaxLength &&
+      !this.isProofBusy
+    );
+  }
+
+  openDeliveryProof(row: AdminWinnerItem): void {
+    this.resetProofForm();
+    this.proofTarget = row;
+  }
+
+  closeDeliveryProof(): void {
+    if (this.isProofBusy) {
+      return;
+    }
+    this.resetProofForm();
+    this.proofTarget = null;
+  }
+
+  onProofFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0] ?? null;
+    this.proofErrorMessage = '';
+
+    if (!file) {
+      this.clearProofFile();
+      return;
+    }
+
+    const validationError = validateUploadImage(file);
+    if (validationError) {
+      this.clearProofFile();
+      if (input) input.value = '';
+      this.proofErrorMessage = validationError;
+      return;
+    }
+
+    this.revokeProofPreview();
+    this.proofFile = file;
+    this.proofFileName = file.name;
+    this.proofPreviewUrl = URL.createObjectURL(file);
+  }
+
+  onProofTestimonialInput(value: string): void {
+    this.proofTestimonial = String(value ?? '').slice(0, this.testimonialMaxLength);
+  }
+
+  submitDeliveryProof(): void {
+    const row = this.proofTarget;
+    const file = this.proofFile;
+    if (!row || !file || !this.canSubmitProof) {
+      if (row && !this.proofConsent) {
+        this.proofErrorMessage = "L'accord du gagnant est obligatoire pour publier la preuve.";
+      }
+      return;
+    }
+
+    this.isSubmittingProof = true;
+    this.proofErrorMessage = '';
+    this.infoMessage = '';
+
+    this.adminApi
+      .uploadWinnerDeliveryProof(row.raffleId, {
+        file,
+        testimonial: this.proofTestimonial,
+      })
+      .subscribe({
+        next: (res) => {
+          this.isSubmittingProof = false;
+          row.deliveryProof = res?.deliveryProof ?? null;
+          this.resetProofForm();
+          this.proofTarget = null;
+          this.infoMessage = `Preuve de remise publiée pour ${row.winnerName}.`;
+          this.loadWinners();
+        },
+        error: (err) => {
+          this.isSubmittingProof = false;
+          this.proofErrorMessage = apiErrorMessage(
+            err,
+            'Publication de la preuve de remise impossible.',
+          );
+        },
+      });
+  }
+
+  askRemoveDeliveryProof(): void {
+    this.proofErrorMessage = '';
+    this.isConfirmingProofRemoval = true;
+  }
+
+  cancelRemoveDeliveryProof(): void {
+    if (this.isRemovingProof) return;
+    this.isConfirmingProofRemoval = false;
+  }
+
+  confirmRemoveDeliveryProof(): void {
+    const row = this.proofTarget;
+    if (!row || this.isProofBusy) {
+      return;
+    }
+
+    this.isRemovingProof = true;
+    this.proofErrorMessage = '';
+    this.infoMessage = '';
+
+    this.adminApi.removeWinnerDeliveryProof(row.raffleId).subscribe({
+      next: () => {
+        this.isRemovingProof = false;
+        this.isConfirmingProofRemoval = false;
+        row.deliveryProof = null;
+        this.infoMessage = `Preuve de remise retirée pour ${row.winnerName}.`;
+        this.loadWinners();
+      },
+      error: (err) => {
+        this.isRemovingProof = false;
+        this.proofErrorMessage = apiErrorMessage(err, 'Retrait de la preuve de remise impossible.');
+      },
+    });
+  }
+
+  deliveryProofImage(row: AdminWinnerItem | null): string | null {
+    return resolveUploadUrl(row?.deliveryProof?.imageUrl, environment.apiBaseUrl, '/uploads/');
+  }
+
+  private clearProofFile(): void {
+    this.revokeProofPreview();
+    this.proofFile = null;
+    this.proofFileName = '';
+  }
+
+  private revokeProofPreview(): void {
+    if (this.proofPreviewUrl) {
+      URL.revokeObjectURL(this.proofPreviewUrl);
+    }
+    this.proofPreviewUrl = '';
+  }
+
+  private resetProofForm(): void {
+    this.clearProofFile();
+    this.proofTestimonial = '';
+    this.proofConsent = false;
+    this.proofErrorMessage = '';
+    this.isConfirmingProofRemoval = false;
   }
 
   statusLabel(status: WinnerWorkflowStatus): string {
@@ -328,6 +505,7 @@ export class WinnersManagementComponent implements OnInit {
       .subscribe({
         next: (res) => {
           this.winners = res.data;
+          this.syncProofTarget();
           this.total = res.total;
           this.totalPages = res.totalPages;
           this.page = res.page;
@@ -339,6 +517,13 @@ export class WinnersManagementComponent implements OnInit {
           this.isLoading = false;
         },
       });
+  }
+
+  /** Garde la modale de preuve alignee sur la ligne rechargee. */
+  private syncProofTarget(): void {
+    if (!this.proofTarget) return;
+    const fresh = this.winners.find((w) => w.raffleId === this.proofTarget?.raffleId);
+    if (fresh) this.proofTarget = fresh;
   }
 
   private loadDrawCandidates(): void {

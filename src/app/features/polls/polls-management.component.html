@@ -1,0 +1,220 @@
+<section class="polls-page">
+  <header class="head">
+    <div>
+      <h3>Sondages « Choisis le prochain lot »</h3>
+      <p>Les joueurs votent pour le prochain lot mis en jeu. Un seul sondage peut être ouvert à la fois.</p>
+    </div>
+    <div class="head-actions">
+      <button type="button" class="btn primary" (click)="openCreateForm()">+ Nouveau sondage</button>
+    </div>
+  </header>
+
+  @if (isLoading) {
+    <p class="status-text">Chargement des sondages...</p>
+  }
+  @if (!isLoading && infoMessage) {
+    <p class="status-text info">{{ infoMessage }}</p>
+  }
+  @if (!isLoading && errorMessage) {
+    <p class="status-text error">{{ errorMessage }}</p>
+  }
+
+  @if (!isLoading && !errorMessage && !polls.length) {
+    <p class="status-text">Aucun sondage pour le moment. Crée un premier brouillon avec « + Nouveau sondage ».</p>
+  }
+
+  @if (!isLoading && polls.length) {
+    <div class="poll-list">
+      @for (poll of polls; track poll.id) {
+        <article class="poll-card" [class.is-open]="poll.status === 'OPEN'">
+          <header class="poll-card__head">
+            <div class="poll-card__title">
+              <span [class]="'pill ' + statusClass(poll.status)">{{ statusLabel(poll) }}</span>
+              <h4>{{ poll.question }}</h4>
+              @if (poll.description) {
+                <p>{{ poll.description }}</p>
+              }
+            </div>
+            <div class="poll-card__meta">
+              <strong>{{ poll.totalVotes | number:'1.0-0' }}</strong>
+              <small>vote{{ poll.totalVotes > 1 ? 's' : '' }}</small>
+            </div>
+          </header>
+
+          <ul class="option-bars">
+            @for (option of poll.options; track option.id) {
+              <li [class.leading]="isLeading(poll, option)">
+                @if (optionImage(option.imageUrl); as img) {
+                  <img class="option-thumb" [src]="img" [alt]="option.label" />
+                } @else {
+                  <span class="option-thumb option-thumb--empty" aria-hidden="true"></span>
+                }
+                <div class="option-bars__body">
+                  <div class="option-bars__label">
+                    <span>{{ option.label }}</span>
+                    <small>{{ option.votes | number:'1.0-0' }} · {{ barWidth(option) }} %</small>
+                  </div>
+                  <div class="bar" role="progressbar" [attr.aria-valuenow]="barWidth(option)" aria-valuemin="0" aria-valuemax="100" [attr.aria-label]="option.label">
+                    <span [style.width.%]="barWidth(option)"></span>
+                  </div>
+                </div>
+              </li>
+            }
+          </ul>
+
+          <footer class="poll-card__foot">
+            <div class="dates">
+              @if (poll.endsAt) {
+                <span>Fin : {{ poll.endsAt | date:'d MMM y, HH:mm' }}</span>
+              } @else {
+                <span>Sans date de fin</span>
+              }
+              @if (poll.openedAt) {
+                <span>Ouvert le {{ poll.openedAt | date:'d MMM y, HH:mm' }}</span>
+              }
+              @if (poll.closedAt) {
+                <span>Fermé le {{ poll.closedAt | date:'d MMM y, HH:mm' }}</span>
+              }
+              @if (poll.createdAt) {
+                <span>Créé le {{ poll.createdAt | date:'d MMM y' }}</span>
+              }
+            </div>
+
+            @if (!isPendingFor(poll)) {
+              <div class="actions">
+                @if (poll.status === 'DRAFT') {
+                  <button type="button" class="action" (click)="openEditForm(poll)" [disabled]="!!actionInProgressId">Modifier</button>
+                  <button
+                    type="button"
+                    class="action primary"
+                    (click)="askAction(poll, 'open')"
+                    [disabled]="!!actionInProgressId"
+                    [title]="hasOpenPoll ? 'Un autre sondage est déjà ouvert : ferme-le d’abord.' : ''">
+                    Ouvrir
+                  </button>
+                  <button type="button" class="action danger" (click)="askAction(poll, 'delete')" [disabled]="!!actionInProgressId">Supprimer</button>
+                }
+                @if (poll.status === 'OPEN') {
+                  <button type="button" class="action danger" (click)="askAction(poll, 'close')" [disabled]="!!actionInProgressId">Fermer</button>
+                }
+              </div>
+            }
+          </footer>
+
+          @if (pendingAction && isPendingFor(poll)) {
+            <div class="inline-confirm" role="alert" [class.danger]="pendingAction.action !== 'open'">
+              <span>{{ confirmationText(pendingAction.action) }}</span>
+              @if (pendingActionError) {
+                <p class="modal-error">{{ pendingActionError }}</p>
+              }
+              <div>
+                <button type="button" class="secondary" (click)="cancelAction()" [disabled]="actionInProgressId === poll.id">Annuler</button>
+                <button type="button" class="confirm" (click)="confirmAction()" [disabled]="actionInProgressId === poll.id">
+                  {{ actionInProgressId === poll.id ? 'En cours...' : confirmLabel(pendingAction.action) }}
+                </button>
+              </div>
+            </div>
+          }
+        </article>
+      }
+    </div>
+  }
+</section>
+
+@if (isFormOpen) {
+  <div class="modal-backdrop">
+    <section class="modal-card poll-form-modal" role="dialog" aria-modal="true" aria-labelledby="poll-form-title">
+      <header>
+        <h4 id="poll-form-title">{{ editingPollId ? 'Modifier le brouillon' : 'Nouveau sondage' }}</h4>
+        <button type="button" (click)="closeForm()" [disabled]="isSaving" aria-label="Fermer">x</button>
+      </header>
+      <p class="hint">Le sondage est créé en brouillon. Tu pourras le modifier jusqu'à son ouverture.</p>
+
+      <form [formGroup]="form" (ngSubmit)="submitForm()" class="poll-form">
+        <label>
+          Question
+          <input
+            type="text"
+            formControlName="question"
+            [maxLength]="questionMax"
+            placeholder="Ex : Quel lot veux-tu gagner le mois prochain ?" />
+          <small class="counter">{{ fieldLength(form.controls.question.value) }} / {{ questionMax }}</small>
+          @if (form.controls.question.touched && form.controls.question.invalid) {
+            <span class="field-error">La question est obligatoire ({{ questionMax }} caractères max).</span>
+          }
+        </label>
+
+        <label>
+          Description (optionnelle)
+          <textarea rows="2" formControlName="description" [maxLength]="descriptionMax"></textarea>
+          <small class="counter">{{ fieldLength(form.controls.description.value) }} / {{ descriptionMax }}</small>
+        </label>
+
+        <label>
+          Date de fin (optionnelle)
+          <input type="datetime-local" formControlName="endsAt" />
+          @if (form.controls.endsAt.touched && form.controls.endsAt.invalid) {
+            <span class="field-error">La date de fin doit être dans le futur.</span>
+          }
+        </label>
+
+        <fieldset class="options" formArrayName="options">
+          <legend>Choix ({{ optionsArray.length }} / {{ maxOptions }})</legend>
+          @for (group of optionsArray.controls; track group; let i = $index) {
+            <div class="option-row" [formGroupName]="i">
+              <div class="option-row__main">
+                <label>
+                  Choix {{ i + 1 }}
+                  <input type="text" formControlName="label" [maxLength]="optionLabelMax" placeholder="Ex : Smartphone" />
+                </label>
+                @if (group.controls.label.touched && group.controls.label.invalid) {
+                  <span class="field-error">Libellé obligatoire ({{ optionLabelMax }} caractères max).</span>
+                }
+                <div class="option-image">
+                  @if (optionImage(group.controls.imageUrl.value); as img) {
+                    <img [src]="img" alt="Image du choix {{ i + 1 }}" />
+                    <button type="button" class="link" (click)="clearOptionImage(group)" [disabled]="isSaving">Retirer l'image</button>
+                  } @else {
+                    <label class="file-picker">
+                      <input
+                        type="file"
+                        [accept]="imageAccept"
+                        (change)="onOptionImageSelected(group, $event)"
+                        [disabled]="isSaving || isOptionUploading(group)" />
+                      <span>{{ isOptionUploading(group) ? 'Upload...' : 'Ajouter une image (optionnel)' }}</span>
+                    </label>
+                  }
+                </div>
+                @if (optionUploadError(group)) {
+                  <span class="field-error">{{ optionUploadError(group) }}</span>
+                }
+              </div>
+              <button
+                type="button"
+                class="remove"
+                (click)="removeOption(i)"
+                [disabled]="!canRemoveOption || isSaving"
+                [attr.aria-label]="'Supprimer le choix ' + (i + 1)">
+                x
+              </button>
+            </div>
+          }
+          <button type="button" class="add-option" (click)="addOption()" [disabled]="!canAddOption || isSaving">
+            + Ajouter un choix
+          </button>
+        </fieldset>
+
+        @if (formErrorMessage) {
+          <p class="modal-error">{{ formErrorMessage }}</p>
+        }
+
+        <footer>
+          <button type="button" class="secondary" (click)="closeForm()" [disabled]="isSaving">Annuler</button>
+          <button type="submit" [disabled]="isSaving || isUploadingAny">
+            {{ isSaving ? 'Enregistrement...' : (editingPollId ? 'Enregistrer' : 'Créer le brouillon') }}
+          </button>
+        </footer>
+      </form>
+    </section>
+  </div>
+}

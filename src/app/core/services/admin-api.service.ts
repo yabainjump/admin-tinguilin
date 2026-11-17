@@ -13,6 +13,7 @@ import {
   PaginatedResponse,
   PaymentsReconciliationResponse,
   PaymentsSummaryResponse,
+  WinnerDeliveryProofResponse,
   WinnerWorkflowStatus,
 } from '../models/admin.models';
 
@@ -183,6 +184,34 @@ export class AdminApiService {
       status: WinnerWorkflowStatus;
       fulfillmentUpdatedAt: string;
     }>(`${this.apiBaseUrl}/admin/raffles/winners/${raffleId}/status`, { status });
+  }
+
+  /**
+   * Publie (ou remplace) la preuve de remise d'un gagnant livre.
+   * `consent` est toujours envoye a "true" : l'appelant doit avoir recueilli
+   * la confirmation explicite de l'admin avant d'appeler cette methode.
+   */
+  uploadWinnerDeliveryProof(
+    raffleId: string,
+    payload: { file: File; testimonial?: string },
+  ): Observable<WinnerDeliveryProofResponse> {
+    const body = new FormData();
+    body.append('file', payload.file);
+    body.append('consent', 'true');
+    const testimonial = String(payload.testimonial ?? '').trim();
+    if (testimonial) {
+      body.append('testimonial', testimonial);
+    }
+    return this.http.post<WinnerDeliveryProofResponse>(
+      `${this.apiBaseUrl}/admin/raffles/winners/${encodeURIComponent(raffleId)}/delivery-proof`,
+      body,
+    );
+  }
+
+  removeWinnerDeliveryProof(raffleId: string): Observable<{ ok: boolean }> {
+    return this.http.delete<{ ok: boolean }>(
+      `${this.apiBaseUrl}/admin/raffles/winners/${encodeURIComponent(raffleId)}/delivery-proof`,
+    );
   }
 
   exportWinnersCsv(params?: {

@@ -192,6 +192,20 @@ export interface AdminWinnerItem {
   raffleDate: string | null;
   status: WinnerWorkflowStatus;
   prizeValue: number;
+  deliveryProof?: WinnerDeliveryProof | null;
+}
+
+/** Preuve de remise publiee (photo + temoignage) d'un gagnant livre. */
+export interface WinnerDeliveryProof {
+  /** Chemin relatif a l'origine de l'API, ex. '/uploads/deliveries/...'. */
+  imageUrl: string;
+  testimonial: string;
+  publishedAt: string;
+}
+
+export interface WinnerDeliveryProofResponse {
+  ok: boolean;
+  deliveryProof: WinnerDeliveryProof;
 }
 
 export interface AdminWinnersSummary {
