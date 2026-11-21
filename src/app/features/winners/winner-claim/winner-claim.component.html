@@ -1,0 +1,145 @@
+<section class="claim" [class.embedded]="embedded" aria-labelledby="claim-title">
+  @if (!embedded) {
+    <header class="claim-head">
+      <h3 id="claim-title">Remettre un lot (code gagnant)</h3>
+      <p>Le gagnant te montre son code à 6 chiffres (reçu par email et visible dans son application).</p>
+    </header>
+  } @else {
+    <h4 id="claim-title" class="visually-hidden">Remettre un lot par code gagnant</h4>
+  }
+
+  <ol class="steps" aria-label="Étapes de la remise">
+    <li [class.active]="step === 'code'" [attr.aria-current]="step === 'code' ? 'step' : null">1. Code</li>
+    <li [class.active]="step === 'review'" [attr.aria-current]="step === 'review' ? 'step' : null">2. Vérification</li>
+    <li [class.active]="step === 'done'" [attr.aria-current]="step === 'done' ? 'step' : null">3. Remise</li>
+  </ol>
+
+  @if (step === 'code') {
+    <form class="code-form" (ngSubmit)="submitCode()" novalidate>
+      <label for="claim-code-input">Code gagnant</label>
+      <input
+        #codeInput
+        id="claim-code-input"
+        name="claimCode"
+        class="code-input"
+        type="text"
+        inputmode="numeric"
+        pattern="[0-9]*"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="••••••"
+        [value]="code"
+        [attr.aria-invalid]="codeError ? 'true' : null"
+        aria-describedby="claim-code-help claim-code-error"
+        [readOnly]="isLookingUp"
+        (input)="onCodeInput($event)" />
+      <small id="claim-code-help">
+        {{ code.length }} / {{ codeLength }} chiffres — la vérification part automatiquement au 6ᵉ chiffre.
+      </small>
+      <p id="claim-code-error" class="error" role="alert" aria-live="assertive">{{ codeError }}</p>
+      <div class="actions">
+        <button type="submit" class="btn primary" [disabled]="isLookingUp || !isCodeComplete">
+          {{ isLookingUp ? 'Vérification...' : 'Vérifier le code' }}
+        </button>
+      </div>
+    </form>
+  }
+
+  @if (step === 'review') {
+    <div class="review">
+      @if (matches.length > 1) {
+        <fieldset class="match-list">
+          <legend>Plusieurs lots correspondent à ce code. Choisis celui à remettre :</legend>
+          @for (m of matches; track m.raffleId) {
+            <button
+              type="button"
+              class="match-option"
+              [class.selected]="selected?.raffleId === m.raffleId"
+              [attr.aria-pressed]="selected?.raffleId === m.raffleId"
+              [disabled]="isClaiming"
+              (click)="selectMatch(m)">
+              <strong>{{ m.prizeTitle || 'Lot' }}</strong>
+              <span>{{ fullName(m) }} · Ticket {{ m.ticketCode || '-' }} · {{ statusLabel(m.fulfillmentStatus) }}</span>
+            </button>
+          }
+        </fieldset>
+      }
+
+      @if (selected; as m) {
+        <article class="winner-card" aria-label="Fiche du gagnant">
+          <div class="identity">
+            @if (avatarUrl(m); as avatar) {
+              <img class="avatar" [src]="avatar" [alt]="'Photo de ' + fullName(m)" />
+            } @else {
+              <span class="avatar avatar-fallback" aria-hidden="true">{{ initials(m) }}</span>
+            }
+            <div>
+              <strong class="name">{{ fullName(m) }}</strong>
+              <dl class="facts">
+                <div><dt>Téléphone</dt><dd>{{ m.winner.phone || '-' }}</dd></div>
+                <div><dt>Email</dt><dd>{{ m.winner.email || '-' }}</dd></div>
+                <div><dt>Région</dt><dd>{{ m.winner.region || '-' }}</dd></div>
+                <div><dt>Membre depuis</dt><dd>{{ m.winner.memberSince ? (m.winner.memberSince | date:'dd/MM/y') : '-' }}</dd></div>
+              </dl>
+            </div>
+          </div>
+
+          <div class="prize">
+            @if (prizeImageUrl(m); as img) {
+              <img class="prize-img" [src]="img" [alt]="m.prizeTitle" />
+            } @else {
+              <span class="prize-img" aria-hidden="true"></span>
+            }
+            <dl class="facts">
+              <div><dt>Lot</dt><dd><strong>{{ m.prizeTitle || '-' }}</strong></dd></div>
+              <div><dt>Ticket</dt><dd>{{ m.ticketCode || '-' }}</dd></div>
+              <div><dt>Tirage</dt><dd>{{ m.drawnAt ? (m.drawnAt | date:'dd/MM/y HH:mm') : '-' }}</dd></div>
+              <div>
+                <dt>Statut</dt>
+                <dd><span class="pill" [class.delivered]="m.fulfillmentStatus === 'DELIVERED'">{{ statusLabel(m.fulfillmentStatus) }}</span></dd>
+              </div>
+            </dl>
+          </div>
+        </article>
+
+        @if (isAlreadyDelivered) {
+          <p class="notice done-notice" role="status">Ce lot a déjà été remis : aucune nouvelle remise possible.</p>
+        } @else {
+          <p class="notice warning" role="note">
+            Vérifie la pièce d'identité : le nom doit correspondre à « {{ fullName(m) }} ».
+          </p>
+          <label class="check">
+            <input type="checkbox" name="idChecked" [(ngModel)]="idChecked" [disabled]="isClaiming" />
+            <span>J'ai vérifié la pièce d'identité du gagnant</span>
+          </label>
+        }
+      } @else {
+        <p class="hint">Sélectionne un lot pour afficher la fiche du gagnant.</p>
+      }
+
+      <p class="error" role="alert" aria-live="assertive">{{ claimError }}</p>
+
+      <div class="actions">
+        <button type="button" class="btn light" (click)="reset()" [disabled]="isClaiming">Changer de code</button>
+        <button type="button" class="btn primary" (click)="confirmClaim()" [disabled]="!canConfirm">
+          {{ isClaiming ? 'Confirmation...' : 'Confirmer la remise' }}
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (step === 'done' && completed) {
+    <div class="done" role="status">
+      <h4 #successHeading tabindex="-1">Lot remis ✅</h4>
+      <p>
+        <strong>{{ completed.match.prizeTitle }}</strong> remis à <strong>{{ fullName(completed.match) }}</strong>
+        le {{ completed.result.claimedAt | date:'dd/MM/y à HH:mm' }}.
+      </p>
+      <p class="hint">Étape suivante conseillée : ajoute une photo de la remise (avec l'accord du gagnant).</p>
+      <div class="actions">
+        <button type="button" class="btn light" (click)="requestProof()">Ajouter la preuve de remise</button>
+        <button type="button" class="btn primary" (click)="reset()">Remettre un autre lot</button>
+      </div>
+    </div>
+  }
+</section>

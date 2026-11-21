@@ -8,7 +8,8 @@
       <button type="button" class="btn light" (click)="exportCsv()" [disabled]="isExporting">
         {{ isExporting ? 'Export...' : 'Export CSV' }}
       </button>
-      <button type="button" class="btn primary" (click)="openAddWinnerModal()">+ Add Winner</button>
+      <button type="button" class="btn light" (click)="openAddWinnerModal()">+ Add Winner</button>
+      <button type="button" class="btn primary" (click)="openClaimModal()">Remettre un lot (code gagnant)</button>
     </div>
   </header>
 
@@ -31,6 +32,9 @@
   }
   @if (!isLoading && infoMessage) {
     <p class="status-text info">{{ infoMessage }}</p>
+  }
+  @if (!isLoading && warningMessage) {
+    <p class="status-text warning" role="status">{{ warningMessage }}</p>
   }
   @if (!isLoading && errorMessage) {
     <p class="status-text error">{{ errorMessage }}</p>
@@ -81,6 +85,14 @@
                   [class.delivered]="row.status === 'DELIVERED'">
                   {{ statusLabel(row.status) }}
                 </span>
+                @if (claimBadgeFor(row); as badge) {
+                  <span class="claim-badge" [class.claimed]="badge.kind === 'claimed'" [class.issued]="badge.kind === 'issued'">
+                    {{ badge.label }}
+                    @if (badge.kind === 'claimed' && badge.date) {
+                      {{ badge.date | date:'dd/MM/y' }}
+                    }
+                  </span>
+                }
               </td>
               <td>
                 <button
@@ -98,6 +110,16 @@
                   (click)="openWinnerContact(row)">
                   Contact
                 </button>
+                @if (canRegenerateCode(row)) {
+                  <button
+                    type="button"
+                    class="action secondary"
+                    [disabled]="actionInProgressRaffleId === row.raffleId || isRegenerating"
+                    [attr.aria-label]="(row.claim?.issued ? 'Renvoyer le code gagnant de ' : 'Générer le code gagnant de ') + row.winnerName"
+                    (click)="askRegenerateCode(row)">
+                    {{ row.claim?.issued ? 'Renvoyer le code' : 'Générer le code' }}
+                  </button>
+                }
                 @if (row.status === 'DELIVERED') {
                   <button
                     type="button"
@@ -422,6 +444,50 @@
         </form>
       }
 
+    </section>
+  </div>
+}
+
+@if (isClaimModalOpen) {
+  <div class="modal-backdrop">
+    <section class="modal-card claim-modal" role="dialog" aria-modal="true" aria-labelledby="claim-modal-title">
+      <header>
+        <h4 id="claim-modal-title">Remettre un lot (code gagnant)</h4>
+        <button type="button" (click)="closeClaimModal()" [disabled]="isClaimBusy" aria-label="Fermer">x</button>
+      </header>
+      <app-winner-claim
+        [embedded]="true"
+        (busyChange)="onClaimBusyChange($event)"
+        (claimed)="onPrizeClaimed($event)"
+        (proofRequested)="openProofForClaim($event)" />
+    </section>
+  </div>
+}
+
+@if (regenTarget) {
+  <div class="modal-backdrop">
+    <section class="modal-card confirm-modal" role="dialog" aria-modal="true" aria-labelledby="regen-modal-title">
+      <header>
+        <h4 id="regen-modal-title">{{ regenTarget.claim?.issued ? 'Renvoyer le code gagnant' : 'Générer le code gagnant' }}</h4>
+        <button type="button" (click)="cancelRegenerateCode()" [disabled]="isRegenerating" aria-label="Fermer">x</button>
+      </header>
+      <p class="hint">
+        Un nouveau code sera généré et envoyé par email à <strong>{{ regenTarget.winnerName }}</strong>
+        ({{ regenTarget.productTitle }}).
+        @if (regenTarget.claim?.issued) {
+          L'ancien code ne fonctionnera plus.
+        }
+        Le code ne s'affiche jamais ici.
+      </p>
+      @if (regenErrorMessage) {
+        <p class="modal-error" role="alert">{{ regenErrorMessage }}</p>
+      }
+      <footer>
+        <button type="button" class="secondary" (click)="cancelRegenerateCode()" [disabled]="isRegenerating">Annuler</button>
+        <button type="button" (click)="confirmRegenerateCode()" [disabled]="isRegenerating">
+          {{ isRegenerating ? 'Envoi...' : 'Oui, envoyer un nouveau code' }}
+        </button>
+      </footer>
     </section>
   </div>
 }

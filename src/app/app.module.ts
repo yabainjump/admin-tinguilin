@@ -15,6 +15,7 @@ import { SettingsComponent } from './features/settings/settings.component';
 import { UsersManagementComponent } from './features/users/users-management.component';
 import { WinnersManagementComponent } from './features/winners/winners-management.component';
 import { PollsManagementComponent } from './features/polls/polls-management.component';
+import { WinnerClaimComponent } from './features/winners/winner-claim/winner-claim.component';
 import { AuthInterceptor } from './core/interceptors/auth.interceptor';
 
 @NgModule({ declarations: [
@@ -29,6 +30,7 @@ import { AuthInterceptor } from './core/interceptors/auth.interceptor';
         SettingsComponent,
         RafflesManagementComponent,
         PollsManagementComponent,
+        WinnerClaimComponent,
     ],
     bootstrap: [AppComponent], imports: [BrowserModule,
         AppRoutingModule,

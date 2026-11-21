@@ -1,4 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import {
@@ -7,9 +8,13 @@ import {
 import {
   AdminWinnerItem,
   AdminWinnersSummary,
+  ClaimCodeMatch,
   WinnerWorkflowStatus,
 } from '../../core/models/admin.models';
 import { AdminApiService } from '../../core/services/admin-api.service';
+import { WinnerClaimApiService } from '../../core/services/winner-claim-api.service';
+import { ClaimBadge, claimBadge, claimErrorMessage } from '../../core/utils/claim-code.util';
+import { ClaimCompletedEvent } from './winner-claim/winner-claim.component';
 import { RafflesApiService } from '../../core/services/raffles-api.service';
 import { resolveAvatarUrl } from '../../core/utils/avatar.util';
 import { apiErrorMessage } from '../../core/utils/api-error.util';
@@ -56,6 +61,16 @@ export class WinnersManagementComponent implements OnInit, OnDestroy {
   isConfirmingProofRemoval = false;
   proofErrorMessage = '';
 
+  // Remise par code gagnant (modale) + regeneration du code.
+  isClaimModalOpen = false;
+  isClaimBusy = false;
+  regenTarget: AdminWinnerItem | null = null;
+  isRegenerating = false;
+  regenErrorMessage = '';
+  warningMessage = '';
+  /** Preuve a ouvrir apres chargement (lien depuis /app/remise-lot). */
+  private pendingProofRaffleId = '';
+
   searchTerm = '';
   activeTab: WinnersTab = 'ALL';
   page = 1;
@@ -78,11 +93,14 @@ export class WinnersManagementComponent implements OnInit, OnDestroy {
   constructor(
     private readonly adminApi: AdminApiService,
     private readonly rafflesApi: RafflesApiService,
+    private readonly claimApi: WinnerClaimApiService,
+    private readonly route: ActivatedRoute,
+    private readonly router: Router,
   ) {
     this.searchTerms
       .pipe(debounceTime(350), distinctUntilChanged(), takeUntilDestroyed())
       .subscribe((value) => {
-        this.infoMessage = '';
+        this.clearNotices();
         this.searchTerm = value;
         this.page = 1;
         this.loadWinners();
@@ -90,6 +108,15 @@ export class WinnersManagementComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const proof = String(params.get('proof') ?? '').trim();
+    const query = String(params.get('q') ?? '').trim().slice(0, 100);
+    if (proof) {
+      this.pendingProofRaffleId = proof;
+      if (query) this.searchTerm = query;
+      // On retire les parametres pour ne pas rouvrir la modale au rechargement.
+      void this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+    }
     this.loadWinners();
   }
 
@@ -102,20 +129,20 @@ export class WinnersManagementComponent implements OnInit, OnDestroy {
   }
 
   setTab(tab: WinnersTab): void {
-    this.infoMessage = '';
+    this.clearNotices();
     this.activeTab = tab;
     this.page = 1;
     this.loadWinners();
   }
 
   previousPage(): void {
-    this.infoMessage = '';
+    this.clearNotices();
     this.page = Math.max(1, this.page - 1);
     this.loadWinners();
   }
 
   nextPage(): void {
-    this.infoMessage = '';
+    this.clearNotices();
     this.page = Math.min(this.totalPages, this.page + 1);
     this.loadWinners();
   }
@@ -154,7 +181,7 @@ export class WinnersManagementComponent implements OnInit, OnDestroy {
 
     this.isDrawingWinner = true;
     this.drawErrorMessage = '';
-    this.infoMessage = '';
+    this.clearNotices();
 
     this.rafflesApi.drawWinner(this.selectedDrawRaffleId).subscribe({
       next: () => {
@@ -179,6 +206,114 @@ export class WinnersManagementComponent implements OnInit, OnDestroy {
 
   closeWinnerContact(): void {
     this.selectedWinnerContact = null;
+  }
+
+  // ------------------------------------------- remise par code gagnant
+
+  openClaimModal(): void {
+    this.clearNotices();
+    this.isClaimBusy = false;
+    this.isClaimModalOpen = true;
+  }
+
+  closeClaimModal(): void {
+    if (this.isClaimBusy) return;
+    this.isClaimModalOpen = false;
+  }
+
+  onClaimBusyChange(busy: boolean): void {
+    this.isClaimBusy = busy;
+  }
+
+  onPrizeClaimed(event: ClaimCompletedEvent): void {
+    this.infoMessage = `Lot « ${event.match.prizeTitle} » remis à ${event.match.winner.firstName} ${event.match.winner.lastName}.`;
+    this.loadWinners();
+  }
+
+  /** Depuis l'ecran de succes : ouvrir la preuve de remise de ce lot. */
+  openProofForClaim(match: ClaimCodeMatch): void {
+    this.isClaimBusy = false;
+    this.isClaimModalOpen = false;
+    const row = this.winners.find((w) => w.raffleId === match.raffleId) ?? this.rowFromClaimMatch(match);
+    this.openDeliveryProof({ ...row, status: 'DELIVERED' });
+  }
+
+  claimBadgeFor(row: AdminWinnerItem): ClaimBadge {
+    return claimBadge(row.claim);
+  }
+
+  canRegenerateCode(row: AdminWinnerItem): boolean {
+    return row.status !== 'DELIVERED' && !row.claim?.claimedAt;
+  }
+
+  askRegenerateCode(row: AdminWinnerItem): void {
+    if (!this.canRegenerateCode(row)) return;
+    this.regenTarget = row;
+    this.regenErrorMessage = '';
+  }
+
+  cancelRegenerateCode(): void {
+    if (this.isRegenerating) return;
+    this.regenTarget = null;
+    this.regenErrorMessage = '';
+  }
+
+  confirmRegenerateCode(): void {
+    const row = this.regenTarget;
+    if (!row || this.isRegenerating) return;
+
+    this.isRegenerating = true;
+    this.regenErrorMessage = '';
+    this.clearNotices();
+
+    this.claimApi.regenerate(row.raffleId).subscribe({
+      next: (res) => {
+        this.isRegenerating = false;
+        this.regenTarget = null;
+        if (res?.emailDelivered) {
+          this.infoMessage = `Nouveau code gagnant envoyé par email à ${row.winnerName}. L'ancien code ne fonctionne plus.`;
+        } else {
+          this.warningMessage =
+            `Code généré mais l'email n'a pas pu partir. ${row.winnerName} peut le retrouver dans son application.`;
+        }
+        this.loadWinners();
+      },
+      error: (err: unknown) => {
+        this.isRegenerating = false;
+        this.regenErrorMessage = claimErrorMessage(err, 'regenerate');
+      },
+    });
+  }
+
+  private clearNotices(): void {
+    this.infoMessage = '';
+    this.warningMessage = '';
+  }
+
+  private rowFromClaimMatch(match: ClaimCodeMatch): AdminWinnerItem {
+    const name = `${match.winner.firstName} ${match.winner.lastName}`.trim();
+    return {
+      raffleId: match.raffleId,
+      winnerUserId: null,
+      winnerName: name,
+      winnerFirstName: match.winner.firstName,
+      winnerLastName: match.winner.lastName,
+      winnerUsername: '',
+      winnerEmail: match.winner.email ?? '',
+      winnerAvatar: match.winner.avatar ?? '',
+      winnerPhone: match.winner.phone ?? '',
+      winnerRole: '',
+      winnerAccountStatus: '',
+      productTitle: match.prizeTitle,
+      productSubtitle: '',
+      productImageUrl: match.prizeImageUrl ?? '',
+      ticketSerial: match.ticketCode,
+      ticketId: match.ticketCode,
+      raffleDate: match.drawnAt,
+      status: match.fulfillmentStatus,
+      prizeValue: 0,
+      deliveryProof: null,
+    };
   }
 
   // ------------------------------------------------------ preuve de remise
@@ -251,7 +386,7 @@ export class WinnersManagementComponent implements OnInit, OnDestroy {
 
     this.isSubmittingProof = true;
     this.proofErrorMessage = '';
-    this.infoMessage = '';
+    this.clearNotices();
 
     this.adminApi
       .uploadWinnerDeliveryProof(row.raffleId, {
@@ -295,7 +430,7 @@ export class WinnersManagementComponent implements OnInit, OnDestroy {
 
     this.isRemovingProof = true;
     this.proofErrorMessage = '';
-    this.infoMessage = '';
+    this.clearNotices();
 
     this.adminApi.removeWinnerDeliveryProof(row.raffleId).subscribe({
       next: () => {
@@ -401,7 +536,7 @@ export class WinnersManagementComponent implements OnInit, OnDestroy {
     const nextStatus = this.statusTargetNext;
     this.actionInProgressRaffleId = row.raffleId;
     this.statusConfirmErrorMessage = '';
-    this.infoMessage = '';
+    this.clearNotices();
     this.errorMessage = '';
 
     this.adminApi.updateWinnerStatus(row.raffleId, nextStatus).subscribe({
@@ -506,6 +641,7 @@ export class WinnersManagementComponent implements OnInit, OnDestroy {
         next: (res) => {
           this.winners = res.data;
           this.syncProofTarget();
+          this.openPendingProof();
           this.total = res.total;
           this.totalPages = res.totalPages;
           this.page = res.page;
@@ -517,6 +653,18 @@ export class WinnersManagementComponent implements OnInit, OnDestroy {
           this.isLoading = false;
         },
       });
+  }
+
+  private openPendingProof(): void {
+    const raffleId = this.pendingProofRaffleId;
+    if (!raffleId) return;
+    this.pendingProofRaffleId = '';
+    const row = this.winners.find((w) => w.raffleId === raffleId);
+    if (row?.status === 'DELIVERED') {
+      this.openDeliveryProof(row);
+    } else {
+      this.infoMessage = 'Lot remis : retrouve le gagnant dans la liste pour ajouter la preuve de remise.';
+    }
   }
 
   /** Garde la modale de preuve alignee sur la ligne rechargee. */

@@ -193,6 +193,50 @@ export interface AdminWinnerItem {
   status: WinnerWorkflowStatus;
   prizeValue: number;
   deliveryProof?: WinnerDeliveryProof | null;
+  /** Etat du code gagnant (absent sur les anciennes reponses = pas de code). */
+  claim?: WinnerClaimInfo | null;
+}
+
+/** Etat du code gagnant d'un lot. Le code lui-meme n'est JAMAIS renvoye a l'admin. */
+export interface WinnerClaimInfo {
+  issued: boolean;
+  issuedAt: string | null;
+  claimedAt: string | null;
+}
+
+/** Gagnant retrouve a partir d'un code gagnant (lookup, ne consomme pas le code). */
+export interface ClaimCodeMatch {
+  raffleId: string;
+  prizeTitle: string;
+  prizeImageUrl: string | null;
+  ticketCode: string | null;
+  drawnAt: string | null;
+  fulfillmentStatus: WinnerWorkflowStatus;
+  winner: {
+    firstName: string;
+    lastName: string;
+    email: string | null;
+    phone: string | null;
+    avatar: string | null;
+    region: string | null;
+    memberSince: string | null;
+  };
+}
+
+export interface ClaimCodeLookupResponse {
+  matches: ClaimCodeMatch[];
+}
+
+export interface ClaimPrizeResponse {
+  raffleId: string;
+  status: 'DELIVERED';
+  claimedAt: string;
+}
+
+export interface RegenerateClaimCodeResponse {
+  raffleId: string;
+  issuedAt: string;
+  emailDelivered: boolean;
 }
 
 /** Preuve de remise publiee (photo + temoignage) d'un gagnant livre. */

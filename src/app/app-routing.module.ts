@@ -11,6 +11,7 @@ import { SettingsComponent } from './features/settings/settings.component';
 import { UsersManagementComponent } from './features/users/users-management.component';
 import { WinnersManagementComponent } from './features/winners/winners-management.component';
 import { PollsManagementComponent } from './features/polls/polls-management.component';
+import { WinnerClaimComponent } from './features/winners/winner-claim/winner-claim.component';
 
 const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -55,6 +56,14 @@ const routes: Routes = [
         path: 'winners',
         component: WinnersManagementComponent,
         data: { title: 'Winners', subtitle: 'Published winners feed from backend.' },
+      },
+      {
+        path: 'remise-lot',
+        component: WinnerClaimComponent,
+        data: {
+          title: 'Remise de lot',
+          subtitle: 'Saisis le code gagnant présenté par le joueur, vérifie son identité puis confirme la remise.',
+        },
       },
       {
         path: 'polls',

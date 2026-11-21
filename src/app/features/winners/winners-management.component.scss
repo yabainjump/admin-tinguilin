@@ -502,6 +502,10 @@ td p {
 }
 
 @media (max-width: 980px) {
+  .head-actions {
+    flex-wrap: wrap;
+  }
+
   .head,
   .toolbar {
     flex-direction: column;
@@ -629,4 +633,38 @@ td p {
   display: flex;
   align-items: flex-start;
   color: #2c254f;
+}
+
+/* ------------------------------------------------ remise par code gagnant */
+
+.status-text.warning {
+  color: #8a5a00;
+}
+
+.claim-badge {
+  display: block;
+  width: fit-content;
+  margin-top: 0.3rem;
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #f1edf9;
+  color: #6f678f;
+}
+
+.claim-badge.issued {
+  background: #e4edff;
+  color: #375ba8;
+}
+
+.claim-badge.claimed {
+  background: #d7f7e5;
+  color: #0a7a43;
+}
+
+.claim-modal {
+  width: min(900px, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
 }
